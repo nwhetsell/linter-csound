@@ -1,0 +1,125 @@
+csound = require 'csound-api'
+
+module.exports =
+LinterCsound =
+  provideLinter: ->
+    return {
+      name: 'Csound'
+      grammarScopes: ['source.csound', 'source.csound-document']
+      scope: 'file'
+      lintOnFly: true
+
+      lint: (editor) ->
+        return new Promise (resolve, reject) ->
+          messages = []
+
+          Csound = csound.Create()
+          csound.CreateMessageBuffer Csound
+          switch editor.getGrammar().name
+            when 'Csound Document'
+              csound.CompileCsd Csound, editor.getPath()
+              parseRow = (rowString) -> return Number(rowString) - 1
+            else
+              csound.CompileOrc Csound, editor.getText()
+              parseRow = (rowString) -> return Number rowString
+          csound.Cleanup Csound
+
+          while csound.GetMessageCnt(Csound) > 0
+            errorMessage = csound.GetFirstMessage Csound
+            csound.PopFirstMessage Csound
+
+            # Error messages begin with “error:”.
+            regex = /^error:/gm
+            result = regex.exec errorMessage
+            continue unless result
+
+            result = /from file/.exec csound.GetFirstMessage Csound
+            if result
+              csound.PopFirstMessage Csound
+
+            # Get the line at which the error occurs and proceed only if it is
+            # between 0 and the number of lines in the text editor. Csound
+            # versions 6.5.0 and likely earlier have an issue where repeated
+            # compilation can result in invalid lines being reported; see
+            # <https://github.com/csound/csound/issues/540>.
+            result = /line (-?\d+):/.exec csound.GetFirstMessage Csound
+            csound.PopFirstMessage Csound
+            continue unless result
+            row = parseRow result[1]
+            continue unless 0 <= row <= editor.getLineCount()
+
+            # Token types are preceded by the word “unexpected”.
+            lastIndex = regex.lastIndex
+            regex = /unexpected (\w+|'.')/g
+            regex.lastIndex = lastIndex
+            result = regex.exec errorMessage
+            continue unless result
+            tokenType = result[1]
+
+            # Find where the token begins in the error message.
+            lastIndex = regex.lastIndex
+            regex = /\(token "/g
+            regex.lastIndex = lastIndex
+            result = regex.exec errorMessage
+            continue unless result
+
+            # The token may be a quoted string. Count the number of quotes at
+            # the beginning of the string to determine when the token ends.
+            quoteCount = 0
+            index = regex.lastIndex
+            while errorMessage.charAt(index) is '"'
+              quoteCount++
+              index++
+            while index < errorMessage.length
+              character = errorMessage.charAt index
+              if character is '\\'
+                index++
+              # Csound seems to use the line where a token ends when reporting
+              # syntax errors. If a token contains a newline, then the error
+              # will be marked at the wrong line; see
+              # <https://github.com/csound/csound/issues/544>
+              else if character is '\n'
+                row--
+              else if character is '"'
+                if quoteCount is 0
+                  token = errorMessage.substring(regex.lastIndex, index).trim()
+                  break
+                quoteCount--
+              index++
+
+            lintMessage = {
+              type: 'Error'
+              filePath: editor.getPath()
+            }
+            messages.push lintMessage
+
+            switch tokenType
+              when 'NEWLINE'
+                csound.PopFirstMessage Csound until /<<</.test csound.GetFirstMessage Csound
+                csound.PopFirstMessage Csound
+                lintMessage.text = csound.GetFirstMessage(Csound).trim()
+                csound.PopFirstMessage Csound
+                result = /Unexpected untyped word (\w+)/.exec lintMessage.text
+                if result
+                  token = result[1]
+                  result = (new RegExp '\\b' + token + '\\b').exec editor.lineTextForBufferRow row
+                  if result
+                    lintMessage.range = [[row, result.index], [row, result.index + token.length]]
+                else
+                  length = editor.lineTextForBufferRow(row).length
+                  if length > 0
+                    lintMessage.range = [[row, length - 1], [row, length]]
+                  lintMessage.text = 'Unexpected end of line'
+              when 'STRING_TOKEN'
+                lintMessage.text = 'Unexpected string ' + token
+              else
+                lintMessage.text = 'Unexpected token ' + token
+
+            if lintMessage.range is undefined
+              lintMessage.range = [[row, 0], [row, 0]]
+
+          csound.DestroyMessageBuffer Csound
+          csound.Destroy Csound
+
+          resolve messages
+    }
