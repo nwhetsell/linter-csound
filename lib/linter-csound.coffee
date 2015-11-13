@@ -15,13 +15,28 @@ LinterCsound =
 
           Csound = csound.Create()
           csound.CreateMessageBuffer Csound
-          switch editor.getGrammar().name
-            when 'Csound Document'
-              csound.CompileCsd Csound, editor.getPath()
-              parseRow = (rowString) -> return Number(rowString) - 1
-            else
-              csound.CompileOrc Csound, editor.getText()
+          if editor.getGrammar().name is 'Csound Document'
+            # The Csound API function csoundCompileCsd can call csoundCompile,
+            # which calls csoundStart
+            # (https://github.com/csound/csound/blob/develop/Top/main.c#L494).
+            # FLTK windows are created when Csound starts
+            # (https://github.com/csound/csound/issues/555), so csoundCompileCsd
+            # cannot be used for linting CSD files. The API function
+            # csoundCompileCsdText added in commit 6770316
+            # (https://github.com/csound/csound/commit/6770316cd9fd6e9c55f9730910a0a6c09a671c20)
+            # calls csoundCompileCsd with the path of a temporary CSD file, so
+            # it cannot be used for linting CSD files either.
+            csound.CompileArgs Csound, ['csound', editor.getPath()]
+            parseRow = (rowString) -> return Number(rowString) - 1
+          else
+            csound.CompileOrc Csound, editor.getText()
+            # Before version 6.06.0, Csound numbered lines in orchestras
+            # starting from 0 and lines in CSD files starting from 1; see
+            # https://github.com/csound/csound/issues/546.
+            if csound.GetVersion() < 6060
               parseRow = (rowString) -> return Number rowString
+            else
+              parseRow = (rowString) -> return Number(rowString) - 1
           csound.Cleanup Csound
 
           while csound.GetMessageCnt(Csound) > 0
@@ -39,9 +54,9 @@ LinterCsound =
 
             # Get the line at which the error occurs and proceed only if it is
             # between 0 and the number of lines in the text editor. Csound
-            # versions 6.5.0 and likely earlier have an issue where repeated
+            # versions 6.05.0 and likely earlier have an issue where repeated
             # compilation can result in invalid lines being reported; see
-            # <https://github.com/csound/csound/issues/540>.
+            # https://github.com/csound/csound/issues/540.
             result = /line (-?\d+):/.exec csound.GetFirstMessage Csound
             csound.PopFirstMessage Csound
             continue unless result
@@ -64,10 +79,10 @@ LinterCsound =
             continue unless result
 
             # The token may be a quoted string. Count the number of quotes at
-            # the beginning of the string to determine when the token ends.
+            # the beginning of the string to determine where the token ends.
             quoteCount = 0
             index = regex.lastIndex
-            while errorMessage.charAt(index) is '"'
+            while errorMessage.charAt(index) is '"' and index < errorMessage.length
               quoteCount++
               index++
             while index < errorMessage.length
@@ -77,7 +92,7 @@ LinterCsound =
               # Csound seems to use the line where a token ends when reporting
               # syntax errors. If a token contains a newline, then the error
               # will be marked at the wrong line; see
-              # <https://github.com/csound/csound/issues/544>
+              # https://github.com/csound/csound/issues/544.
               else if character is '\n'
                 row--
               else if character is '"'
