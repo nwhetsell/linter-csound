@@ -4,7 +4,7 @@ This [Atom](https://atom.io/) package adds syntax checking to [Csound](https://e
 
 ## Read This Before Installing, It’s Important
 
-This package performs syntax checking through Csound’s [API](https://csound.github.io/docs/api/index.html). Using Csound for syntax checking seems to have exposed some issues ([#541](https://github.com/csound/csound/issues/541) and [#542](https://github.com/csound/csound/issues/542)) in Csound. __These issues can crash Atom.__ (To be clear, these are issues in Csound, not Atom.) Until these issues are resolved, you should use this package with caution.
+This package performs syntax checking with Csound’s [API](https://csound.github.io/docs/api/index.html). Using Csound for syntax checking seems to have exposed some issues ([#540](https://github.com/csound/csound/issues/540#issuecomment-150343675), [#542](https://github.com/csound/csound/issues/542), and  [#544](https://github.com/csound/csound/issues/544)) in Csound. __These issues can crash Atom.__ (To be clear, these are issues in Csound, not Atom.) Until these issues are resolved, you should use this package with caution.
 
 ## Installing
 
