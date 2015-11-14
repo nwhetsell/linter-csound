@@ -1,7 +1,7 @@
 {
   "name": "linter-csound",
   "main": "./lib/linter-csound",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Lint Csound files using Csound’s API",
   "keywords": [
     "csound",
