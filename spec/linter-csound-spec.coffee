@@ -3,7 +3,7 @@ describe 'linter-csound', ->
 
   beforeEach ->
     waitsForPromise ->
-      atom.packages.activatePackage('linter-csound')
+      atom.packages.activatePackage 'linter-csound'
 
   it 'finds an unexpected untyped word', ->
     waitsForPromise ->
@@ -13,7 +13,7 @@ describe 'linter-csound', ->
           expect(messages.length).toEqual 1
           message = messages[0]
           expect(message.type).toEqual 'Error'
-          expect(message.text).toEqual('Unexpected untyped word foo when expecting a variable')
+          expect(message.text).toEqual 'Unexpected untyped word foo when expecting a variable'
 
   it 'finds an unexpected string', ->
     waitsForPromise ->
@@ -23,7 +23,7 @@ describe 'linter-csound', ->
           expect(messages.length).toEqual 1
           message = messages[0]
           expect(message.type).toEqual 'Error'
-          expect(message.text).toEqual('Unexpected string "foo"')
+          expect(message.text).toEqual 'Unexpected string "foo"'
 
   it 'finds an unexpected end of line', ->
     waitsForPromise ->
@@ -33,4 +33,4 @@ describe 'linter-csound', ->
           expect(messages.length).toEqual 1
           message = messages[0]
           expect(message.type).toEqual 'Error'
-          expect(message.text).toEqual('Unexpected end of line')
+          expect(message.text).toEqual 'Unexpected end of line'
