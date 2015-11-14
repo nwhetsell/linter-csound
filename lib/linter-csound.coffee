@@ -126,7 +126,13 @@ LinterCsound =
                     lintMessage.range = [[row, length - 1], [row, length]]
                   lintMessage.text = 'Unexpected end of line'
               when 'STRING_TOKEN'
-                lintMessage.text = 'Unexpected string ' + token
+                lintMessage.text = 'Unexpected string '
+                # If an unexpected string token is an empty string, then token
+                # will be undefined.
+                if token is undefined
+                  lintMessage.text += '""'
+                else
+                  lintMessage.text += token
               else
                 lintMessage.text = 'Unexpected token ' + token
 
