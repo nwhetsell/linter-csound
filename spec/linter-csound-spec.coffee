@@ -15,7 +15,7 @@ describe 'linter-csound', ->
           expect(message.type).toEqual 'Error'
           expect(message.text).toEqual 'Unexpected untyped word foo when expecting a variable'
 
-  it 'finds an unexpected string', ->
+  it 'finds an unexpected non-empty quoted string', ->
     waitsForPromise ->
       atom.workspace.open().then (editor) ->
         editor.setText '"foo"\n'
@@ -24,6 +24,16 @@ describe 'linter-csound', ->
           message = messages[0]
           expect(message.type).toEqual 'Error'
           expect(message.text).toEqual 'Unexpected string "foo"'
+
+  it 'finds an unexpected empty quoted string', ->
+    waitsForPromise ->
+      atom.workspace.open().then (editor) ->
+        editor.setText '""\n'
+        lint(editor).then (messages) ->
+          expect(messages.length).toEqual 1
+          message = messages[0]
+          expect(message.type).toEqual 'Error'
+          expect(message.text).toEqual 'Unexpected string ""'
 
   it 'finds an unexpected end of line', ->
     waitsForPromise ->
