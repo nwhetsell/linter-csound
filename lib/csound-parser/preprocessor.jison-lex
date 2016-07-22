@@ -1,0 +1,927 @@
+/*
+ * These patterns need to be kept synchronized with the check for unnecessary
+ * periods ending a use of a macro.
+ */
+identifier [A-Z_a-z]\w*
+macro_use \${identifier}\.?
+
+/*
+ * To match the behavior of the Csound preprocessor, enclose these directives in
+ * parentheses so that jison-lex does not append word break patterns to them.
+ * Also, #define is the only directive that permits whitespace after the #.
+ */
+include (?:"#include")
+define "#"[ \t]*(?:"define")
+undef (?:"#undef")
+ifdef_or_ifndef "#if""n"?(?:"def")
+
+newline (?:\n|\r\n?)
+single_line_comment (?:";"|"//").*(?:{newline}|$)
+
+/*
+ * The Csound preprocessor uses ; instead of a more general single-line comment
+ * pattern.
+ */
+line_continuation "\\"[ \t]*(?:";".*)?{newline}
+
+else "#else"
+endif "#end"(?:"if")?\b
+
+%x block_comment
+
+%x quoted_string
+%x braced_string
+
+%s define_directive
+%x macro_parameter_name_list
+%x after_macro_parameter_name
+%x after_macro_parameter_name_separator
+%s before_macro_body
+%s macro_body
+
+%s undef_directive
+
+%s ifdef_directive
+%s ifndef_directive
+%s ifdef_true
+%x ifdef_false
+%s else_true
+%x else_false
+
+%x include_directive
+
+%x macro_parameter_value_list
+%x after_macro_parameter_value
+
+%x next_power_of_2
+%x next_power_of_2_plus_1
+
+%%
+
+<INITIAL,quoted_string>{line_continuation}
+%{
+  this.currentTextNode = null;
+  for (let i = yyleng - 1; i > 0; i--) {
+    // TODO: const character
+    var character = yytext.charAt(i);
+    if (character !== '\n' && character !== '\r') {
+      this.messages.push({
+        type: 'Warning',
+        filePath: this.filePath,
+        text: 'Line continuation is not followed immediately by newline',
+        range: [
+          [yylloc.first_line - 1, yylloc.first_column],
+          [yylloc.first_line - 1, yylloc.first_column + 1]
+        ]
+      });
+      break;
+    }
+  }
+%}
+
+"/*"
+%{
+  this.begin('block_comment');
+  this.startRanges.push(this.rangeFromLocation(yylloc));
+  this.addText(' ');
+%}
+<block_comment>"/*"
+%{
+  this.messages.push({
+    type: 'Warning',
+    filePath: this.filePath,
+    text: `${this.quote(yytext)} in block comment`,
+    range: this.rangeFromLocation(yylloc)
+  });
+%}
+<block_comment>"*/"
+%{
+  this.startRanges.pop();
+  this.popState();
+%}
+<block_comment>.|{newline} // Do nothing
+<block_comment><<EOF>>
+%{
+  this.messages.push({
+    type: 'Error',
+    filePath: this.filePath,
+    text: 'Unterminated block comment',
+    range: this.startRanges.pop()
+  });
+%}
+
+{single_line_comment} this.addNewline();
+
+<quoted_string,braced_string>"\\"[^abfnrtv"\\\\]
+%{
+  this.addText(yytext);
+  this.messages.push({
+    type: 'Warning',
+    filePath: this.filePath,
+    text: `Unknown escape sequence ${this.quote(yytext)}`,
+    range: this.rangeFromLocation(yylloc)
+  });
+%}
+
+\"
+%{
+  this.begin('quoted_string');
+  this.startRanges.push(this.rangeFromLocation(yylloc));
+  this.addText(yytext);
+%}
+<quoted_string>"\\".|[^$"\n\r] this.addText(yytext);
+<quoted_string>\"
+%{
+  this.startRanges.pop();
+  this.popState();
+  this.addText(yytext);
+%}
+<quoted_string>{newline}|<<EOF>>
+%{
+  this.messages.push({
+    type: 'Error',
+    filePath: this.filePath,
+    text: `Missing terminating ${this.quote('"')}`,
+    range: this.startRanges.pop()
+  });
+%}
+
+"{{"
+%{
+  this.begin('braced_string');
+  this.startRanges.push(this.rangeFromLocation(yylloc));
+  this.addText(yytext);
+%}
+<braced_string>(?:[^}]|"}"[^}])+ this.addText(yytext);
+<braced_string>"}}"
+%{
+  this.startRanges.pop();
+  this.popState();
+  this.addText(yytext);
+%}
+<braced_string><<EOF>>
+%{
+  this.messages.push({
+    type: 'Error',
+    filePath: this.filePath,
+    text: `Missing terminating ${this.quote('}}')}`,
+    range: this.startRanges.pop()
+  });
+%}
+
+<INITIAL,quoted_string>{macro_use}\(
+%{
+  let i = yyleng - 2;
+  if (yytext.charAt(i) === '.') {
+    this.messages.push({
+      type: 'Warning',
+      filePath: this.filePath,
+      text: `Unnecessary ${this.quote('.')} after macro name`,
+      range: [
+        [yylloc.first_line - 1, yylloc.first_column + i],
+        [yylloc.first_line - 1, yylloc.first_column + i + 1]
+      ]
+    });
+  } else {
+    i++;
+  }
+  this.macroUse = new MacroUseElement(yytext, this.getMacro(yytext.substring(1, i)));
+  this.begin('macro_parameter_value_list');
+%}
+
+<macro_parameter_value_list>[^'#)]+
+%{
+  {
+    this.begin('after_macro_parameter_value');
+    const macrosByName = this.macroUse.macrosByName;
+    const parameterNameIndex = Object.keys(macrosByName).length;
+    // TODO: const macro
+    var macro = this.macroUse.macro;
+    if (parameterNameIndex >= macro.parameterNames.length) {
+      throw new CsoundPreprocessorError({
+        type: 'Error',
+        filePath: this.filePath,
+        text: 'Too many arguments provided to function-like macro',
+        range: this.rangeFromLocation(yylloc),
+        trace: [{
+          type: 'Trace',
+          filePath: this.filePath,
+          text: `Macro ${this.quote(macro.name)} defined here`,
+          range: macro.range
+        }]
+      });
+    }
+    const macroName = macro.parameterNames[parameterNameIndex];
+    macrosByName[macroName] = {
+      name: macroName,
+      body: yytext
+    };
+  }
+%}
+
+<after_macro_parameter_value>\)
+%{
+  this.popState();
+  this.popState();
+  this.expandMacro(YY_START);
+%}
+
+<INITIAL,quoted_string>{macro_use}
+%{
+  {
+    let i = yyleng - 1;
+    if (yytext.charAt(i) === '.') {
+      // TODO: const character
+      var character = this.input();
+      this.unput(character);
+      // This needs to be kept synchronized with the macro name pattern.
+      if (!/\w/.test(character)) {
+        this.messages.push({
+          type: 'Warning',
+          filePath: this.filePath,
+          text: `Unnecessary ${this.quote('.')} after macro name`,
+          range: [
+            [yylloc.first_line - 1, yylloc.first_column + i],
+            [yylloc.first_line - 1, yylloc.first_column + i + 1]
+          ]
+        });
+      }
+    } else {
+      i++;
+    }
+    this.macroUse = new MacroUseElement(yytext, this.getMacro(yytext.substring(1, i)));
+    this.expandMacro(YY_START);
+  }
+%}
+
+{define}
+%{
+  this.begin('define_directive');
+  this.startRanges.push(this.rangeFromLocation(yylloc));
+  this.sourceRange = {location: this.matched.length - yytext.length};
+%}
+
+<define_directive>{identifier}\(?
+%{
+  this.popState();
+  const newMacro = {body: ''};
+  const lastCharacterIndex = yyleng - 1;
+  if (yytext.charAt(lastCharacterIndex) === '(') {
+    this.begin('macro_parameter_name_list');
+    this.startRanges.push([
+      [yylloc.last_line - 1, yylloc.last_column - 1],
+      [yylloc.last_line - 1, yylloc.last_column]
+    ]);
+    newMacro.name = yytext.substr(0, lastCharacterIndex);
+    newMacro.parameterNames = [];
+    newMacro.range = [
+      [yylloc.first_line - 1, yylloc.first_column],
+      [yylloc.last_line - 1, yylloc.last_column - 1]
+    ];
+  } else {
+    this.begin('before_macro_body');
+    newMacro.name = yytext;
+    newMacro.range = this.rangeFromLocation(yylloc);
+  }
+  // TODO: const macro
+  var macro = this.macrosByName[newMacro.name];
+  if (macro) {
+    // TODO: const message
+    var message = {
+      type: 'Warning',
+      filePath: this.filePath,
+      text: `${this.quote(newMacro.name)} macro redefined`,
+      range: newMacro.range
+    };
+    if (macro.range) {
+      message.trace = [{
+        type: 'Trace',
+        filePath: this.filePath,
+        text: 'Previous definition is here',
+        range: macro.range
+      }];
+    } else {
+      message.text += `, was ${this.quote(macro.body)}`;
+    }
+    this.messages.push(message);
+  }
+  this.macro = newMacro;
+  this.macrosByName[newMacro.name] = newMacro;
+%}
+<define_directive>\s+ // Do nothing
+
+<macro_parameter_name_list,after_macro_parameter_name_separator>{identifier}
+%{
+  const parameterNames = this.macro.parameterNames;
+  if (parameterNames.indexOf(yytext) >= 0) {
+    throw new CsoundPreprocessorError({
+      type: 'Error',
+      filePath: this.filePath,
+      text: `Duplicate macro parameter name ${this.quote(yytext)}`,
+      range: this.rangeFromLocation(yylloc)
+    });
+  }
+  parameterNames.push(yytext);
+  if ('after_macro_parameter_name_separator' === YY_START)
+    this.popState();
+  this.begin('after_macro_parameter_name');
+%}
+<macro_parameter_name_list,macro_parameter_value_list>\)
+%{
+  this.startRanges.pop();
+  if ('macro_parameter_name_list' === this.popState())
+    this.begin('before_macro_body');
+%}
+<macro_parameter_name_list,after_macro_parameter_name_separator>\s+ // Do nothing
+<macro_parameter_name_list,after_macro_parameter_name_separator>.
+%{
+  throw new CsoundPreprocessorError({
+    type: 'Error',
+    filePath: this.filePath,
+    text: 'Expected macro parameter name',
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+  });
+%}
+<macro_parameter_name_list><<EOF>>
+%{
+  this.messages.push({
+    type: 'Error',
+    filePath: this.filePath,
+    text: `Missing terminating ${this.quote(')')}`,
+    range: this.startRanges.pop()
+  });
+%}
+
+<after_macro_parameter_name,after_macro_parameter_value>['#]
+%{
+  if (yytext !== "'") {
+    this.messages.push({
+      type: 'Warning',
+      filePath: this.filePath,
+      text: `${this.quote(yytext)} instead of single quote used to separate macro parameters`,
+      range: this.rangeFromLocation(yylloc)
+    });
+  }
+  if ('after_macro_parameter_name' === this.popState())
+    this.begin('after_macro_parameter_name_separator');
+%}
+<after_macro_parameter_name,after_macro_parameter_value>\)
+%{
+  const wasAfterMacroParameterName = 'after_macro_parameter_name' === this.popState();
+  this.popState();
+  if (wasAfterMacroParameterName)
+    this.begin('before_macro_body');
+%}
+<after_macro_parameter_name>\s+ // Do nothing
+<after_macro_parameter_name>.
+%{
+  throw new CsoundPreprocessorError({
+    type: 'Error',
+    filePath: this.filePath,
+    text: 'Expected single quote in macro parameter list',
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+  });
+%}
+
+<before_macro_body>"#"
+%{
+  this.popState();
+  this.begin('macro_body');
+  this.startRanges.push(this.rangeFromLocation(yylloc));
+%}
+<before_macro_body>\s+ // Do nothing
+<before_macro_body>[^#]|<<EOF>>
+%{
+  // TODO: const message
+  var message = {
+    type: 'Error',
+    filePath: this.filePath,
+    text: `Expected ${this.quote('#')} after macro name`,
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+  };
+  if (yytext.length > 0)
+    throw new CsoundPreprocessorError(message);
+  this.messages.push(message);
+%}
+
+<macro_body>("\#"|[^#])+ this.macro.body = yytext;
+<macro_body>"#"
+%{
+  this.startRanges.pop();
+  this.popState();
+  this.sourceRange.length = this.matched.length - this.sourceRange.location;
+  this.addText(' ', this.sourceRange);
+%}
+<macro_body><<EOF>>
+%{
+  this.messages.push({
+    type: 'Error',
+    filePath: this.filePath,
+    text: `Missing terminating ${this.quote('#')}`,
+    range: this.startRanges.pop()
+  });
+%}
+
+{undef}
+%{
+  this.begin('undef_directive');
+  this.startRanges.push(this.rangeFromLocation(yylloc));
+%}
+
+<undef_directive>{identifier}
+%{
+  this.startRanges.pop();
+  this.popState();
+  if (this.macrosByName[yytext]) {
+    delete this.macrosByName[yytext];
+  } else {
+    this.messages.push({
+      type: 'Error',
+      filePath: this.filePath,
+      text: `${this.quote(yytext)} macro is not defined`,
+      range: this.rangeFromLocation(yylloc)
+    });
+  }
+%}
+
+{ifdef_or_ifndef}
+%{
+  this.begin(yytext.startsWith('#ifdef') ? 'ifdef_directive' : 'ifndef_directive');
+  this.startRanges.push(this.rangeFromLocation(yylloc));
+%}
+<ifdef_directive>{identifier} this.popState(); this.begin(this.macrosByName[yytext] ? 'ifdef_true' : 'ifdef_false');
+<ifndef_directive>{identifier} this.popState(); this.begin(!this.macrosByName[yytext] ? 'ifdef_true' : 'ifdef_false');
+
+<ifdef_true,ifdef_false,else_true,else_false>{endif}
+%{
+  this.startRanges.pop();
+  this.popState();
+%}
+
+<else_true,else_false>{else}
+%{
+  this.messages.push({
+    type: 'Error',
+    filePath: this.filePath,
+    text: '#else after #else',
+    range: this.rangeFromLocation(yylloc)
+  });
+%}
+
+<ifdef_true>{else} this.popState(); this.begin('else_false');
+
+<ifdef_false>{else} this.popState(); this.begin('else_true');
+<ifdef_false,else_false>.|{newline} // Do nothing
+
+<ifdef_true,ifdef_false,else_true,else_false><<EOF>>
+%{
+  this.messages.push({
+    type: 'Error',
+    filePath: this.filePath,
+    text: 'Unterminated conditional directive',
+    range: this.startRanges.pop()
+  });
+%}
+
+{endif}
+%{
+  this.messages.push({
+    type: 'Error',
+    filePath: this.filePath,
+    text: `${yytext} without #ifdef or #ifndef`,
+    range: this.rangeFromLocation(yylloc)
+  });
+%}
+
+{else}
+%{
+  this.messages.push({
+    type: 'Error',
+    filePath: this.filePath,
+    text: '#else without #ifdef or #ifndef',
+    range: this.rangeFromLocation(yylloc)
+  });
+%}
+
+{include}
+%{
+  this.begin('include_directive');
+  this.startRanges.push(this.rangeFromLocation(yylloc));
+%}
+<include_directive>[ \t] // Do nothing
+<include_directive>[^ \t]
+%{
+  {
+    const includeRange = this.rangeFromPosition(yylloc.first_line, yylloc.first_column);
+    const delimiter = yytext;
+    if (delimiter !== '"') {
+      this.messages.push({
+        type: 'Warning',
+        filePath: this.filePath,
+        text: `${this.quote(delimiter)} instead of ${this.quote('"')} used to enclose file path`,
+        range: includeRange
+      });
+    }
+    let includeFilePath = '';
+    // TODO: let character
+    for (var character = this.input(); character !== delimiter; character = this.input()) {
+      if (character === '\n' || character === '\r' || !character) {
+        throw new CsoundPreprocessorError({
+          type: 'Error',
+          filePath: this.filePath,
+          text: `Missing terminating ${this.quote(delimiter)}`,
+          range: includeRange
+        });
+      }
+      includeFilePath += character;
+    }
+    this.popState();
+    if (includeFilePath.length > 0) {
+      let paths = [];
+      if (path.isAbsolute(includeFilePath)) {
+        paths.push(includeFilePath);
+      } else {
+        // From https://csound.github.io/docs/manual/OrchDirFiles.html, first
+        // search the current directory, then the directory of the file being
+        // preprocessed. TODO: Then search the directories in INCDIR.
+        paths.push(path.resolve());
+        if (this.filePath)
+          paths.push(path.dirname(this.filePath));
+        paths = paths.map(directory => path.join(directory, includeFilePath));
+      }
+      for (const absolutePath of paths) {
+        let stats;
+        try {
+          stats = fs.statSync(absolutePath);
+        } catch (error) {
+          continue;
+        }
+        if (stats.isFile()) {
+          if (this.includeDepth === this.maximumIncludeDepth) {
+            throw new CsoundPreprocessorError({
+              type: 'Error',
+              filePath: this.filePath,
+              text: '#include nested too deeply',
+              range: includeRange
+            });
+          }
+          const preprocessor = this.makePreprocessor(fs.readFileSync(absolutePath, 'utf8'));
+          preprocessor.filePath = absolutePath;
+          preprocessor.includeDepth = this.includeDepth + 1;
+          preprocessor.lex();
+          for (const childNode of preprocessor.rootElement.childNodes) {
+            this.rootElement.childNodes.push(childNode);
+          }
+          this.currentTextNode = null;
+          return;
+        }
+      }
+      throw new CsoundPreprocessorError({
+        type: 'Error',
+        filePath: this.filePath,
+        text: `${this.quote(includeFilePath)} file not found`,
+        range: includeRange
+      });
+    } else {
+      this.messages.push({
+        type: 'Warning',
+        filePath: this.filePath,
+        text: 'Empty file path',
+        range: includeRange
+      });
+    }
+  }
+%}
+<include_directive>{newline}|<<EOF>>
+%{
+  throw new CsoundPreprocessorError({
+    type: 'Error',
+    filePath: this.filePath,
+    text: 'File path missing',
+    range: this.startRanges.pop()
+  });
+%}
+
+<define_directive,undef_directive,ifdef_directive,ifndef_directive>\s+ // Do nothing
+<define_directive,undef_directive,ifdef_directive,ifndef_directive>[^\s]
+%{
+  throw new CsoundPreprocessorError({
+    type: 'Error',
+    filePath: this.filePath,
+    text: 'Macro name must be an identifier',
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+  });
+%}
+<define_directive,undef_directive,ifdef_directive,ifndef_directive><<EOF>>
+%{
+  this.messages.push({
+    type: 'Error',
+    filePath: this.filePath,
+    text: 'Macro name missing',
+    range: this.startRanges.pop()
+  });
+%}
+
+<INITIAL,macro_parameter_value_list>"@" this.begin('next_power_of_2');
+<next_power_of_2>"@" this.popState(); this.begin('next_power_of_2_plus_1');
+
+<next_power_of_2>\d+
+%{
+  this.popState();
+  this.addText(Math.pow(2, Math.ceil(Math.log2(parseInt(yytext, 10) + 1))).toString());
+%}
+<next_power_of_2_plus_1>\d+
+%{
+  this.popState();
+  const number = parseInt(yytext, 10);
+  this.addText((number === 0) ? '2' : (Math.pow(2, Math.ceil(Math.log2(number))) + 1).toString());
+%}
+
+<next_power_of_2,next_power_of_2_plus_1>[ \t]+
+%{
+  this.messages.push({
+    type: 'Warning',
+    filePath: this.filePath,
+    text: 'Unnecessary whitespace in next-power-of-2 expander',
+    range: this.rangeFromLocation(yylloc)
+  });
+%}
+
+<next_power_of_2,next_power_of_2_plus_1>[^ \t\d]|<<EOF>>
+%{
+  throw new CsoundPreprocessorError({
+    type: 'Error',
+    filePath: this.filePath,
+    text: 'Expected integer',
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+  });
+%}
+
+<INITIAL,ifdef_true,else_true>{newline} this.addNewline();
+
+<INITIAL,ifdef_true,else_true>. this.addText(yytext);
+
+%%
+
+const fs = require('fs');
+const path = require('path');
+
+lexer.addNewline = (function() {
+  this.sourceMap.add(
+    [this.yylloc.first_line - 1, this.yylloc.first_column],
+    [this.generatedLineCount, this.generatedColumnCount]
+  );
+  if (this.currentTextNode) {
+    this.currentTextNode.text += '\n';
+  } else {
+    this.currentTextNode = new CsoundPreprocessorTextNode('\n');
+    this.rootElement.childNodes.push(this.currentTextNode);
+  }
+  this.generatedLineCount++;
+  this.generatedColumnCount = 0;
+}).bind(lexer);
+
+lexer.addText = (function(text) {
+  this.sourceMap.add(
+    [this.yylloc.first_line - 1, this.yylloc.first_column],
+    [this.generatedLineCount, this.generatedColumnCount]
+  );
+  if (this.currentTextNode) {
+    this.currentTextNode.text += text;
+  } else {
+    this.currentTextNode = new CsoundPreprocessorTextNode(text);
+    this.rootElement.childNodes.push(this.currentTextNode);
+  }
+  this.generatedColumnCount += text.length;
+}).bind(lexer);
+
+lexer.expandMacro = (function(YY_START) {
+  const macrosByName = this.macroUse.macrosByName;
+  const macro = this.macroUse.macro;
+  if (macro.parameterNames && Object.keys(macrosByName).length < macro.parameterNames.length) {
+    throw new CsoundPreprocessorError({
+      type: 'Error',
+      filePath: this.filePath,
+      text: 'Too few arguments provided to function-like macro',
+      range: [
+        [this.yylloc.first_line - 1, this.yylloc.first_column],
+        [this.yylloc.first_line - 1, this.yylloc.first_column]
+      ],
+      trace: [{
+        type: 'Trace',
+        filePath: this.filePath,
+        text: `Macro ${this.quote(macro.name)} defined here`,
+        range: macro.range
+      }]
+    });
+  }
+  const preprocessor = this.makePreprocessor(macro.body);
+  preprocessor.filePath = this.filePath;
+  Object.assign(preprocessor.macrosByName, macrosByName);
+  try {
+    preprocessor.lex();
+  } catch (error) {
+    if (error.lintMessage)
+      error.lintMessage.range = this.macroUse.range;
+    throw(error);
+  }
+  this.macroUse.childNodes = preprocessor.rootElement.childNodes;
+  this.rootElement.childNodes.push(this.macroUse);
+  this.currentTextNode = null;
+  if ('quoted_string' === YY_START) {
+    this.messages.push({
+      type: 'Warning',
+      filePath: this.filePath,
+      text: `${this.quote(macro.name)} macro expanded in string`,
+      range: this.rangeFromLocation(this.yylloc)
+    });
+  }
+}).bind(lexer);
+
+lexer.getMacro = (function(macroName) {
+  const macro = this.macrosByName[macroName];
+  if (!macro) {
+    throw new CsoundPreprocessorError({
+      type: 'Error',
+      filePath: this.filePath,
+      text: `${this.quote(macroName)} is not a macro or macro parameter`,
+      range: this.rangeFromLocation(this.yylloc)
+    });
+  }
+  return macro;
+}).bind(lexer);
+
+lexer.getOutput = (function() {
+  return this.rootElement.getOutput();
+}).bind(lexer);
+
+const original_lex = lexer.lex;
+lexer.lex = (function() {
+  const token = original_lex.apply(this, arguments);
+  if (this.done) {
+    this.sourceMap.add(
+      [this.yylloc.first_line - 1, this.yylloc.first_column + 1],
+      [this.generatedLineCount, this.generatedColumnCount]
+    );
+  }
+  return token;
+}).bind(lexer);
+
+lexer.makePreprocessor = (function(input) {
+  // A function like yy_scan_string is not available in jison-lex. Instead,
+  // this function creates a new preprocessor, taking care to avoid getting the
+  // current preprocessor in the Node.js module cache.
+  delete require.cache[__filename];
+  const preprocessor = require(__filename);
+  preprocessor.setInput(input);
+  Object.assign(preprocessor.macrosByName, this.macrosByName);
+  return preprocessor;
+}).bind(lexer);
+
+lexer.maximumIncludeDepth = 100;
+
+lexer.quote = string => `‘${string}’`;
+
+lexer.rangeFromLocation = yylloc => {
+  return [
+    [yylloc.first_line - 1, yylloc.first_column],
+    [yylloc.last_line - 1, yylloc.last_column]
+  ];
+};
+
+lexer.rangeFromPosition = (line, column) => {
+  const lineMinus1 = line - 1;
+  return [[lineMinus1, column], [lineMinus1, column]];
+};
+
+const original_setInput = lexer.setInput;
+lexer.setInput = (function(input, yy) {
+  this.currentTextNode = null;
+  this.includeDepth = 0;
+  this.generatedColumnCount = 0;
+  this.generatedLineCount = 0;
+  // From cs_init_math_constants_macros in
+  // https://github.com/csound/csound/blob/develop/Engine/csound_pre.lex
+  this.macrosByName = {
+    M_E:        {name: 'M_E',        body: '2.71828182845904523536'},
+    M_LOG2E:    {name: 'M_LOG2E',    body: '1.44269504088896340736'},
+    M_LOG10E:   {name: 'M_LOG10E',   body: '0.43429448190325182765'},
+    M_LN2:      {name: 'M_LN2',      body: '0.69314718055994530942'},
+    M_LN10:     {name: 'M_LN10',     body: '2.30258509299404568402'},
+    M_PI:       {name: 'M_PI',       body: '3.14159265358979323846'},
+    M_PI_2:     {name: 'M_PI_2',     body: '1.57079632679489661923'},
+    M_PI_4:     {name: 'M_PI_4',     body: '0.78539816339744830962'},
+    M_1_PI:     {name: 'M_1_PI',     body: '0.31830988618379067154'},
+    M_2_PI:     {name: 'M_2_PI',     body: '0.63661977236758134308'},
+    M_2_SQRTPI: {name: 'M_2_SQRTPI', body: '1.12837916709551257390'},
+    M_SQRT2:    {name: 'M_SQRT2',    body: '1.41421356237309504880'},
+    M_SQRT1_2:  {name: 'M_SQRT1_2',  body: '0.70710678118654752440'},
+    M_INF:      {name: 'M_INF',      body: '800000000000.0'}
+  };
+  this.messages = [];
+  this.rootElement = new CsoundPreprocessorElement();
+  this.sourceMap = new SourceMap();
+  this.startRanges = [];
+  return original_setInput.apply(this, arguments);
+}).bind(lexer);
+
+class CsoundPreprocessorTextNode {
+  constructor(text) {
+    this.text = text;
+  }
+
+  getOutput() {
+    return this.text;
+  }
+}
+
+class CsoundPreprocessorElement {
+  constructor() {
+    this.childNodes = [];
+  }
+
+  getOutput() {
+    let output = '';
+    for (const childNode of this.childNodes) {
+      output += childNode.getOutput();
+    }
+    return output;
+  }
+}
+
+class MacroUseElement extends CsoundPreprocessorElement {
+  constructor(text, macro) {
+    super();
+    this.text = text;
+    this.macro = macro;
+    this.macrosByName = {};
+  }
+}
+
+// The LineMap and SourceMap classes are based on code in CoffeeScript
+// <http://coffeescript.org/documentation/docs/sourcemap.html>, which is
+// MIT-licensed <https://github.com/jashkenas/coffeescript/blob/master/LICENSE>.
+
+class LineMap {
+  constructor(line) {
+    this.line = line;
+    this.columnMaps = [];
+  }
+
+  add(column, sourceLocation) {
+    this.columnMaps[column] = {
+      line: this.line,
+      column: column,
+      sourceLine: sourceLocation[0],
+      sourceColumn: sourceLocation[1]
+    };
+  }
+
+  sourceLocation(column) {
+    for ( ; column >= 0; column--) {
+      const map = this.columnMaps[column];
+      if (map)
+        return [map.sourceLine, map.sourceColumn];
+    }
+    return null;
+  }
+}
+
+class SourceMap {
+  constructor(line) {
+    this.lineMaps = [];
+  }
+
+  add(sourceLocation, generatedLocation) {
+    const line = generatedLocation[0];
+    let lineMap = this.lineMaps[line];
+    if (!lineMap) {
+      lineMap = new LineMap(line);
+      this.lineMaps[line] = lineMap;
+    }
+    lineMap.add(generatedLocation[1], sourceLocation);
+  }
+
+  sourceLocation(location) {
+    for (let line = location[0]; line >= 0; line--) {
+      const lineMap = this.lineMaps[line];
+      if (lineMap)
+        return lineMap.sourceLocation(location[1]);
+    }
+    return null;
+  }
+
+  sourceRange(range) {
+    return [this.sourceLocation(range[0]), this.sourceLocation(range[1])];
+  }
+}
+
+class CsoundPreprocessorError extends Error {
+  constructor(lintMessage) {
+    super(lintMessage.text);
+    this.name = 'CsoundPreprocessorError';
+    this.lintMessage = lintMessage;
+  }
+}
+
+module.exports = lexer

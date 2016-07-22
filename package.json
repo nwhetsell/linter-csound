@@ -2,7 +2,7 @@
   "name": "linter-csound",
   "main": "./lib/linter-csound",
   "version": "0.1.3",
-  "description": "Lint Csound files using Csound’s API",
+  "description": "Lint Csound orchestras",
   "keywords": [
     "csound",
     "music",
@@ -22,5 +22,11 @@
         "1.0.0": "provideLinter"
       }
     }
-  }
+  },
+  "devDependencies": {
+    "jison": "https://github.com/GerHobbelt/jison.git"
+  },
+  "packages-deps": [
+    "linter"
+  ]
 }

@@ -1,0 +1,378 @@
+/*
+ * This lexer assumes that its input orchestra has been preprocessed. This means
+ * that the orchestra cannot contain preprocessor directives, macro uses, next-
+ * power-of-2 expanders (@ or @@ followed by digits), line continuations, or
+ * comments. Also, all line endings must be line feeds (\n, U+000A).
+ */
+
+whitespace [ \t]+
+optional_whitespace [ \t]*
+optional_whitespace_and_newline {optional_whitespace}\n?
+
+identifier [A-Z_a-z]\w*
+
+decimal_integer \d+
+signed_integer [-+]?{decimal_integer}
+exponent_indicator [e] /* The Csound lexer does not use [eE]. */
+exponent {exponent_indicator}{signed_integer}
+decimal_number \d+\.?\d*{exponent}?|\.\d+{exponent}?
+hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
+
+%x after_instr_keyword
+%x after_instrument_number_or_identifier
+%x after_instrument_plus_sign
+
+%x after_opcode_keyword
+%x after_opcode_name
+%x before_opcode_output_types
+%x after_opcode_output_types
+%x before_opcode_input_types
+
+%options flex
+
+%%
+
+\n return 'NEWLINE';
+
+<*>{whitespace} // Do nothing
+
+"("{optional_whitespace_and_newline}  return '(';
+")"                                   return ')';
+"["{optional_whitespace_and_newline}  return '[';
+"]"                                   return ']';
+"+"{optional_whitespace_and_newline}  return '+';
+"-"{optional_whitespace_and_newline}  return '-';
+"*"{optional_whitespace_and_newline}  return '*';
+"/"{optional_whitespace_and_newline}  return '/';
+"%"{optional_whitespace_and_newline}  return '%';
+"^"{optional_whitespace_and_newline}  return '^';
+"?"{optional_whitespace_and_newline}  return '?';
+":"                                   return ':';
+","{optional_whitespace_and_newline}  return ',';
+"!"{optional_whitespace_and_newline}  return '!';
+
+/*
+ * The -> operator is called S_ELIPSIS in
+ * https://github.com/csound/csound/blob/develop/Engine/csound_orc.lex. It
+ * appears to be undocumented.
+ */
+"->"                                  return '->';
+
+"!="{optional_whitespace_and_newline} return '!=';
+"&&"{optional_whitespace_and_newline} return '&&';
+"||"{optional_whitespace_and_newline} return '||';
+"<<"{optional_whitespace_and_newline} return '<<';
+">>"{optional_whitespace_and_newline} return '>>';
+"<"{optional_whitespace_and_newline}  return '<';
+"<="{optional_whitespace_and_newline} return '<=';
+"=="{optional_whitespace_and_newline} return '==';
+"+="{optional_whitespace_and_newline} return '+=';
+"-="{optional_whitespace_and_newline} return '-=';
+"*="{optional_whitespace_and_newline} return '*=';
+"/="{optional_whitespace_and_newline} return '/=';
+"="{optional_whitespace_and_newline}  return '=';
+">"{optional_whitespace_and_newline}  return '>';
+">="{optional_whitespace_and_newline} return '>=';
+"|"{optional_whitespace_and_newline}  return '|';
+"&"{optional_whitespace_and_newline}  return '&';
+"#"{optional_whitespace_and_newline}  return '#';
+
+/*
+ * For backward compatibility with ISO/IEC 8859-1
+ * <https://en.wikipedia.org/wiki/ISO/IEC_8859-1> encoded files, the Csound
+ * lexer began using the regex pattern \xC2?\xAC to match ¬ in commit a2adbcc
+ * <https://github.com/csound/csound/commit/a2adbccac16e11062236f6dcdf982f4d289800f2>.
+ * (UTF-8 encodes ¬ as the 2-byte sequence C2 A2, and ISO/IEC 8859-1 encodes ¬
+ * as the single byte A2.) Strings in JavaScript are always Unicode, so just use
+ * a literal ¬.
+ */
+[~¬]{optional_whitespace_and_newline} return '~';
+
+"if"       return 'IF';
+"then"     return 'THEN';
+"ithen"    return 'THEN';
+"kthen"    return 'THEN';
+"elseif"   return 'ELSEIF';
+"else"     return 'ELSE';
+"endif"    return 'ENDIF';
+"fi"
+%{
+  this.messages.push({
+    type: 'Warning',
+    text: `${this.quote(yytext)} instead of ${this.quote('endif')} used to end if statement`,
+    range: this.rangeFromLocation(yylloc)
+  });
+  return 'ENDIF';
+%}
+"until"    return 'UNTIL';
+"while"    return 'WHILE';
+"do"       return 'DO';
+"od"       return 'OD';
+"enduntil"
+%{
+  this.messages.push({
+    type: 'Warning',
+    text: `${this.quote(yytext)} instead of ${this.quote('od')} used to end loop`,
+    range: this.rangeFromLocation(yylloc)
+  });
+  return 'OD';
+%}
+
+"goto"     return 'GOTO';
+"igoto"    return 'GOTO';
+"kgoto"    return 'GOTO';
+
+^{optional_whitespace}\w+":"(?:{whitespace}|\n|$)
+%{
+  const labelName = this.nameFromLabel(yytext);
+  const label = this.symbolTable.labels[labelName];
+  if (label) {
+    this.messages.push({
+      type: 'Warning',
+      text: `Duplicate label ${this.quote(labelName)} ignored`,
+      range: this.sourceMap.sourceRange([
+        [yylloc.first_line - 1, yylloc.first_column],
+        [yylloc.first_line - 1, yylloc.first_column + labelName.length]
+      ]),
+      trace: [{
+        type: 'Trace',
+        text: `Label ${this.quote(labelName)} is defined here`,
+        range: label.range
+      }]
+    });
+  } else {
+    this.symbolTable.addLabel(labelName, this.sourceMap.sourceRange([
+      [yylloc.first_line - 1, yylloc.first_column],
+      [yylloc.first_line - 1, yylloc.first_column + labelName.length]
+    ]));
+  }
+  return 'LABEL';
+%}
+
+"instr"
+%{
+  this.begin('after_instr_keyword');
+  return 'INSTR';
+%}
+"endin" return 'ENDIN';
+
+<after_instr_keyword>{decimal_integer}
+%{
+  this.popState();
+  this.begin('after_instrument_number_or_identifier');
+  return 'DECIMAL_INTEGER';
+%}
+<after_instr_keyword>{identifier}
+%{
+  this.popState();
+  this.begin('after_instrument_number_or_identifier');
+  return 'IDENTIFIER';
+%}
+<after_instr_keyword>"+"
+%{
+  this.popState();
+  this.begin('after_instrument_plus_sign');
+  return '+';
+%}
+<after_instr_keyword>.
+%{
+  throw new CsoundLexerError({
+    type: 'Error',
+    text: 'Expected instrument number or identifier',
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+  });
+%}
+
+<after_instrument_number_or_identifier>","{optional_whitespace_and_newline}
+%{
+  this.popState();
+  this.begin('after_instr_keyword');
+  return ',';
+%}
+<after_instrument_number_or_identifier>\n
+%{
+  this.popState();
+  return 'NEWLINE';
+%}
+<after_instrument_number_or_identifier>[^,\n]
+%{
+  throw new CsoundLexerError({
+    type: 'Error',
+    text: 'Expected newline after instrument numbers and identifiers',
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+  });
+%}
+
+<after_instrument_plus_sign>{identifier}
+%{
+  this.popState();
+  this.begin('after_instrument_number_or_identifier');
+  return 'IDENTIFIER';
+%}
+<after_instrument_plus_sign>.
+%{
+  throw new CsoundLexerError({
+    type: 'Error',
+    text: 'Expected instrument identifier',
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+  });
+%}
+
+"opcode"
+%{
+  this.begin('after_opcode_keyword');
+  return 'OPCODE';
+%}
+"endop" return 'ENDOP';
+
+<after_opcode_keyword>{identifier}
+%{
+  this.popState();
+  this.opcodeEntry = {opname: yytext};
+  this.begin('after_opcode_name');
+  return 'IDENTIFIER';
+%}
+<after_opcode_keyword>.
+%{
+  throw new CsoundLexerError({
+    type: 'Error',
+    text: 'Expected opcode name',
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+  });
+%}
+
+<after_opcode_name>","{optional_whitespace_and_newline}
+%{
+  this.popState();
+  this.begin('before_opcode_output_types');
+  return ',';
+%}
+<after_opcode_name>[^,]
+%{
+  throw new CsoundLexerError({
+    type: 'Error',
+    text: 'Expected comma after opcode output name',
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+  });
+%}
+
+<before_opcode_output_types>"0"|(?:[aikftSK](?:\\[\\])*)+
+%{
+  this.popState();
+  this.opcodeEntry.outypes = yytext;
+  this.begin('after_opcode_output_types');
+  return 'OPCODE_OUTPUT_TYPES';
+%}
+<before_opcode_output_types>.
+%{
+  throw new CsoundLexerError({
+    type: 'Error',
+    text: 'Expected output types',
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+  });
+%}
+
+<after_opcode_output_types>","{optional_whitespace_and_newline}
+%{
+  this.popState();
+  this.begin('before_opcode_input_types');
+  return ',';
+%}
+<after_opcode_output_types>[^,]
+%{
+  throw new CsoundLexerError({
+    type: 'Error',
+    text: 'Expected comma after opcode output types',
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+  });
+%}
+
+<before_opcode_input_types>"0"|(?:[aijkftKOJVPopS](?:\\[\\])*)+
+%{
+  this.popState();
+  this.opcodeEntry.intypes = yytext;
+  this.symbolTable.addOpcodeEntry(this.opcodeEntry);
+  return 'OPCODE_INPUT_TYPES';
+%}
+<before_opcode_input_types>.
+%{
+  throw new CsoundLexerError({
+    type: 'Error',
+    text: 'Expected opcode input types',
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+  });
+%}
+
+/* The Csound lexer does not emit integer tokens for hex integers. */
+{hexadecimal_integer} return 'NUMBER';
+
+{decimal_integer} return 'DECIMAL_INTEGER';
+
+{decimal_number} return 'NUMBER';
+
+"0dbfs"|"k"(?:"r"|"smps")|"nchnls"(?:"_i")?|"sr" return 'GLOBAL_VALUE_IDENTIFIER';
+
+{identifier}
+%{
+  const symbol = this.symbolTable.identifiers[yytext];
+  if (symbol && symbol.kind === 'opcode') {
+    for (const outputTypeString of Object.getOwnPropertyNames(symbol.inputTypeStringsByLengthByOutputTypeString)) {
+      if (outputTypeString.length > 0)
+        return 'OPCODE';
+    }
+    return 'VOID_OPCODE';
+  }
+  return 'IDENTIFIER';
+%}
+
+\"(\\.|[^"])*\"|"{{"(?:[^}]|"}"[^}])*"}}" return 'STRING';
+
+.
+%{
+  this.messages.push({
+    type: 'Error',
+    text: `Unexpected character ${this.quote(yytext)}`,
+    range: this.rangeFromLocation(yylloc)
+  });
+%}
+
+%%
+
+lexer.nameFromLabel = label => label.trim().replace(/:$/, '');
+
+lexer.quote = string => `‘${string}’`;
+
+lexer.rangeFromLocation = (function(yylloc) {
+  return [
+    this.sourceMap.sourceLocation([yylloc.first_line - 1, yylloc.first_column]),
+    this.sourceMap.sourceLocation([yylloc.last_line - 1, yylloc.last_column])
+  ];
+}).bind(lexer);
+
+lexer.rangeFromPosition = (function(line, column) {
+  const lineMinus1 = line - 1;
+  return [
+    this.sourceMap.sourceLocation([lineMinus1, column]),
+    this.sourceMap.sourceLocation([lineMinus1, column])
+  ];
+}).bind(lexer);
+
+const original_setInput = lexer.setInput;
+lexer.setInput = (function(input, yy) {
+  this.messages = [];
+  this.sourceMap = {
+    sourceLocation: location => location,
+    sourceRange: range => range
+  };
+  const SymbolTable = require(require('path').resolve(__dirname, '..', 'csound-symbol-table', 'symbol-table.js'));
+  this.symbolTable = new SymbolTable();
+  return original_setInput.apply(this, arguments);
+}).bind(lexer);
+
+class CsoundLexerError extends Error {
+  constructor(lintMessage) {
+    super(lintMessage.text);
+    this.name = 'CsoundLexerError';
+    this.lintMessage = lintMessage;
+  }
+}
