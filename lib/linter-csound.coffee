@@ -9,7 +9,7 @@ orchestraParserPath = path.join __dirname, 'csound-parser', 'orchestra-parser.js
 module.exports =
 LinterCsound =
   provideLinter: ->
-
+    # Populate a symbol table with Csound’s built-in opcodes.
     Csound = csound.Create()
     opcodeList = []
     csound.NewOpcodeList Csound, opcodeList
