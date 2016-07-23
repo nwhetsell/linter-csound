@@ -664,7 +664,7 @@ endif "#end"(?:"if")?\b
 
 "{"
 %{
-  if (lexer.isScorePreprocessor) {
+  if (this.isScorePreprocessor) {
     this.macro = {body: ''};
     this.startRanges.push(this.rangeFromLocation(yylloc));
     this.begin('score_loop');
