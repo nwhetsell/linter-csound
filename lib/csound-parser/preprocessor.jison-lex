@@ -56,6 +56,12 @@ endif "#end"(?:"if")?\b
 %x next_power_of_2
 %x next_power_of_2_plus_1
 
+%x score_loop
+%x score_loop_after_left_brace
+%x score_loop_after_repeat_count
+%x score_loop_after_repitition_macro_name
+%x inner_score_loop
+
 %%
 
 <INITIAL,quoted_string>{line_continuation}
@@ -656,6 +662,100 @@ endif "#end"(?:"if")?\b
   });
 %}
 
+"{"
+%{
+  if (lexer.isScorePreprocessor) {
+    this.macro = {body: ''};
+    this.startRanges.push(this.rangeFromLocation(yylloc));
+    this.begin('score_loop');
+    this.begin('score_loop_after_left_brace');
+  } else {
+    this.addText(yytext);
+  }
+%}
+
+<score_loop_after_left_brace>[1-9]\d*
+%{
+  this.macro.repeatCount = Number(yytext);
+  this.popState();
+  this.begin('score_loop_after_repeat_count');
+%}
+<score_loop_after_left_brace>\s+ // Do nothing
+<score_loop_after_left_brace>.|{newline}
+%{
+  throw new CsoundPreprocessorError({
+    type: 'Error',
+    filePath: this.filePath,
+    text: 'Expected integer greater than 0',
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+  });
+%}
+
+<score_loop_after_repeat_count>{identifier}
+%{
+  this.macro.repititionMacro = {name: yytext};
+  this.popState();
+  this.begin('score_loop_after_repitition_macro_name');
+%}
+<score_loop_after_repeat_count>{newline} this.popState();
+<score_loop_after_repeat_count>\s+ // Do nothing
+<score_loop_after_repeat_count>.
+%{
+  throw new CsoundPreprocessorError({
+    type: 'Error',
+    filePath: this.filePath,
+    text: 'Expected macro name',
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+  });
+%}
+
+<score_loop_after_repitition_macro_name>{newline} this.popState();
+<score_loop_after_repitition_macro_name>\s+ // Do nothing
+<score_loop_after_repitition_macro_name>.
+%{
+  throw new CsoundPreprocessorError({
+    type: 'Error',
+    filePath: this.filePath,
+    text: 'Expected newline',
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+  });
+%}
+
+<score_loop,inner_score_loop>"{"
+%{
+  this.macro.body += yytext;
+  this.begin('inner_score_loop');
+%}
+<score_loop>"}"
+%{
+  const repititionMacro = this.macro.repititionMacro;
+  for (let repitition = 1; repitition <= this.macro.repeatCount; repitition++) {
+    this.macroUse = new MacroUseElement(this.macro);
+    if (repititionMacro) {
+      repititionMacro.body = repitition.toString();
+      this.macroUse.macrosByName[repititionMacro.name] = repititionMacro;
+    }
+    this.expandMacro(YY_START);
+  }
+  this.startRanges.pop();
+  this.popState();
+%}
+<inner_score_loop>"}"
+%{
+  this.macro.body += yytext;
+  this.popState();
+%}
+<score_loop,inner_score_loop>.|{newline} this.macro.body += yytext;
+<score_loop,inner_score_loop><<EOF>>
+%{
+  this.messages.push({
+    type: 'Error',
+    filePath: this.filePath,
+    text: `Missing terminating ${this.quote('}')}`,
+    range: this.startRanges.pop()
+  });
+%}
+
 {newline} this.addNewline();
 
 . this.addText(yytext);
@@ -708,6 +808,7 @@ lexer.expandMacro = (function(YY_START) {
   }
   const preprocessor = this.makePreprocessor(macro.body);
   preprocessor.filePath = this.filePath;
+  preprocessor.isScorePreprocessor = this.isScorePreprocessor;
   Object.assign(preprocessor.macrosByName, macrosByName);
   try {
     preprocessor.lex();
