@@ -7,8 +7,8 @@ macro_use \${identifier}\.?
 
 /*
  * To match the behavior of the Csound preprocessor, enclose these directives in
- * parentheses so that jison-lex does not append word break patterns to them.
- * Also, #define is the only directive that permits whitespace after the #.
+ * non-capturing groups so that jison-lex does not append word break patterns to
+ * them. Also, #define is the only directive that allows whitespace after the #.
  */
 include (?:"#include")
 define "#"[ \t]*(?:"define")
@@ -185,7 +185,7 @@ endif "#end"(?:"if")?\b
   } else {
     i++;
   }
-  this.macroUse = new MacroUseElement(yytext, this.getMacro(yytext.substring(1, i)));
+  this.macroUse = new MacroUseElement(this.getMacro(yytext.substring(1, i)));
   this.begin('macro_parameter_value_list');
 %}
 
@@ -249,7 +249,7 @@ endif "#end"(?:"if")?\b
     } else {
       i++;
     }
-    this.macroUse = new MacroUseElement(yytext, this.getMacro(yytext.substring(1, i)));
+    this.macroUse = new MacroUseElement(this.getMacro(yytext.substring(1, i)));
     this.expandMacro(YY_START);
   }
 %}
@@ -628,13 +628,12 @@ endif "#end"(?:"if")?\b
 <next_power_of_2>\d+
 %{
   this.popState();
-  this.addText(Math.pow(2, Math.ceil(Math.log2(parseInt(yytext, 10) + 1))).toString());
+  this.addText(Math.pow(2, Math.ceil(Math.log2(Number(yytext) + 1))).toString());
 %}
 <next_power_of_2_plus_1>\d+
 %{
   this.popState();
-  const number = parseInt(yytext, 10);
-  this.addText((number === 0) ? '2' : (Math.pow(2, Math.ceil(Math.log2(number))) + 1).toString());
+  this.addText((yytext === '0') ? '2' : (Math.pow(2, Math.ceil(Math.log2(Number(yytext)))) + 1).toString());
 %}
 
 <next_power_of_2,next_power_of_2_plus_1>[ \t]+
@@ -657,9 +656,9 @@ endif "#end"(?:"if")?\b
   });
 %}
 
-<INITIAL,ifdef_true,else_true>{newline} this.addNewline();
+{newline} this.addNewline();
 
-<INITIAL,ifdef_true,else_true>. this.addText(yytext);
+. this.addText(yytext);
 
 %%
 
@@ -667,21 +666,17 @@ const fs = require('fs');
 const path = require('path');
 
 lexer.addNewline = (function() {
-  this.sourceMap.add(
-    [this.yylloc.first_line - 1, this.yylloc.first_column],
-    [this.generatedLineCount, this.generatedColumnCount]
-  );
-  if (this.currentTextNode) {
-    this.currentTextNode.text += '\n';
-  } else {
-    this.currentTextNode = new CsoundPreprocessorTextNode('\n');
-    this.rootElement.childNodes.push(this.currentTextNode);
-  }
+  this.appendToCurrentTextNode('\n');
   this.generatedLineCount++;
   this.generatedColumnCount = 0;
 }).bind(lexer);
 
 lexer.addText = (function(text) {
+  this.appendToCurrentTextNode(text);
+  this.generatedColumnCount += text.length;
+}).bind(lexer);
+
+lexer.appendToCurrentTextNode = (function(text) {
   this.sourceMap.add(
     [this.yylloc.first_line - 1, this.yylloc.first_column],
     [this.generatedLineCount, this.generatedColumnCount]
@@ -692,7 +687,6 @@ lexer.addText = (function(text) {
     this.currentTextNode = new CsoundPreprocessorTextNode(text);
     this.rootElement.childNodes.push(this.currentTextNode);
   }
-  this.generatedColumnCount += text.length;
 }).bind(lexer);
 
 lexer.expandMacro = (function(YY_START) {
@@ -703,10 +697,7 @@ lexer.expandMacro = (function(YY_START) {
       type: 'Error',
       filePath: this.filePath,
       text: 'Too few arguments provided to function-like macro',
-      range: [
-        [this.yylloc.first_line - 1, this.yylloc.first_column],
-        [this.yylloc.first_line - 1, this.yylloc.first_column]
-      ],
+      range: lexer.rangeFromPosition(this.yylloc.first_line, this.yylloc.first_column),
       trace: [{
         type: 'Trace',
         filePath: this.filePath,
@@ -850,9 +841,8 @@ class CsoundPreprocessorElement {
 }
 
 class MacroUseElement extends CsoundPreprocessorElement {
-  constructor(text, macro) {
+  constructor(macro) {
     super();
-    this.text = text;
     this.macro = macro;
     this.macrosByName = {};
   }
