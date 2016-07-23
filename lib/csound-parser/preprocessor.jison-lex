@@ -240,7 +240,7 @@ endif "#end"(?:"if")?\b
       // TODO: const character
       var character = this.input();
       this.unput(character);
-      // This needs to be kept synchronized with the macro name pattern.
+      // This needs to be kept synchronized with the macro name patterns.
       if (!/\w/.test(character)) {
         this.messages.push({
           type: 'Warning',
@@ -264,7 +264,6 @@ endif "#end"(?:"if")?\b
 %{
   this.begin('define_directive');
   this.startRanges.push(this.rangeFromLocation(yylloc));
-  this.sourceRange = {location: this.matched.length - yytext.length};
 %}
 
 <define_directive>{identifier}\(?
@@ -415,8 +414,7 @@ endif "#end"(?:"if")?\b
 %{
   this.startRanges.pop();
   this.popState();
-  this.sourceRange.length = this.matched.length - this.sourceRange.location;
-  this.addText(' ', this.sourceRange);
+  this.addText(' ');
 %}
 <macro_body><<EOF>>
 %{
