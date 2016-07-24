@@ -191,7 +191,10 @@ endif "#end"(?:"if")?\b
   } else {
     i++;
   }
-  this.macroUse = new MacroUseElement(this.getMacro(yytext.substring(1, i)));
+  this.macroUse = new MacroUseElement(this.getMacro(yytext.substring(1, i)), [
+    [yylloc.first_line - 1, yylloc.first_column],
+    [yylloc.first_line - 1, yylloc.first_column + i]
+  ]);
   this.begin('macro_parameter_value_list');
 %}
 
@@ -255,7 +258,7 @@ endif "#end"(?:"if")?\b
     } else {
       i++;
     }
-    this.macroUse = new MacroUseElement(this.getMacro(yytext.substring(1, i)));
+    this.macroUse = new MacroUseElement(this.getMacro(yytext.substring(1, i)), this.rangeFromLocation(yylloc));
     this.expandMacro(YY_START);
   }
 %}
@@ -728,7 +731,7 @@ endif "#end"(?:"if")?\b
 %{
   const repititionMacro = this.macro.repititionMacro;
   for (let repitition = 1; repitition <= this.macro.repeatCount; repitition++) {
-    this.macroUse = new MacroUseElement(this.macro);
+    this.macroUse = new MacroUseElement(this.macro, this.rangeFromLocation(yylloc));
     if (repititionMacro) {
       repititionMacro.body = repitition.toString();
       this.macroUse.macrosByName[repititionMacro.name] = repititionMacro;
@@ -804,7 +807,16 @@ lexer.expandMacro = (function(YY_START) {
       }]
     });
   }
+  if (this.expansionDepth === this.maximumExpansionDepth) {
+    throw new CsoundPreprocessorError({
+      type: 'Error',
+      filePath: this.filePath,
+      text: 'Macro expanded too deeply',
+      range: this.macroUse.range
+    });
+  }
   const preprocessor = this.makePreprocessor(macro.body);
+  preprocessor.expansionDepth = this.expansionDepth + 1;
   preprocessor.filePath = this.filePath;
   Object.assign(preprocessor.macrosByName, macrosByName);
   try {
@@ -868,6 +880,8 @@ lexer.makePreprocessor = (function(input) {
   return preprocessor;
 }).bind(lexer);
 
+lexer.maximumExpansionDepth = 100;
+
 lexer.maximumIncludeDepth = 100;
 
 lexer.quote = string => `‘${string}’`;
@@ -887,6 +901,7 @@ lexer.rangeFromPosition = (line, column) => {
 const original_setInput = lexer.setInput;
 lexer.setInput = (function(input, yy) {
   this.currentTextNode = null;
+  this.expansionDepth = 0;
   this.includeDepth = 0;
   this.generatedColumnCount = 0;
   this.generatedLineCount = 0;
@@ -940,10 +955,11 @@ class CsoundPreprocessorElement {
 }
 
 class MacroUseElement extends CsoundPreprocessorElement {
-  constructor(macro) {
+  constructor(macro, range) {
     super();
     this.macro = macro;
     this.macrosByName = {};
+    this.range = range;
   }
 }
 
