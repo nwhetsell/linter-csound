@@ -251,7 +251,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %{
   throw new CsoundLexerError({
     type: 'Error',
-    text: 'Expected comma after opcode output name',
+    text: 'Expected comma after opcode name',
     range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
   });
 %}
