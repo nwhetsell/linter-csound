@@ -28,6 +28,8 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %x after_opcode_output_types
 %x before_opcode_input_types
 
+%x opcode_output_type_annotation
+
 %options flex
 
 %%
@@ -317,12 +319,32 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
   const symbol = this.symbolTable.identifiers[yytext];
   if (symbol && symbol.kind === 'opcode') {
     for (const outputTypeString of Object.getOwnPropertyNames(symbol.inputTypeStringsByLengthByOutputTypeString)) {
-      if (outputTypeString.length > 0)
+      if (outputTypeString.length > 0) {
+        const character = this.input();
+        if (character === ':')
+          this.begin('opcode_output_type_annotation');
+        else
+          this.unput(character);
         return 'OPCODE';
+      }
     }
     return 'VOID_OPCODE';
   }
   return 'IDENTIFIER';
+%}
+
+<opcode_output_type_annotation>[ak]
+%{
+  this.popState();
+  return 'OPCODE_OUTPUT_TYPE_ANNOTATION';
+%}
+<opcode_output_type_annotation>[^ak]
+%{
+  throw new CsoundLexerError({
+    type: 'Error',
+    text: 'Expected output type (‘a’ or ‘k’)',
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+  });
 %}
 
 \"(\\.|[^"])*\"|"{{"(?:[^}]|"}"[^}])*"}}" return 'STRING';

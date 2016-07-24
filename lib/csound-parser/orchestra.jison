@@ -60,11 +60,14 @@ postfix_expression
     }
   | opcode '(' opcode_inputs ')'
     {
-      $$ = new OpcodeInvocation(@$, {children: [$1, $3]});
+      $$ = new OpcodeInvocation(@$, {children: [$1, new ArgumentList(@3, {children: $3})]});
     }
-  | opcode ':' opcode_type_annotation '(' opcode_inputs ')'
+  | opcode OPCODE_OUTPUT_TYPE_ANNOTATION '(' opcode_inputs ')'
     {
-      $$ = new OpcodeInvocation(@$, {children: [$1, $5], outputType: $3});
+      $$ = new OpcodeInvocation(@$, {
+        children: [$1, new ArgumentList(@4, {children: $4})],
+        outputType: $2
+      });
     }
   ;
 
@@ -248,7 +251,7 @@ opcode_inputs
     }
   | opcode_inputs ',' conditional_expression
     {
-      $$.push($2);
+      $$.push($3);
     }
   ;
 
@@ -713,8 +716,7 @@ const original_parseError = parser.parseError;
 parser.parseError = (function(str, hash, lintMessage) {
   if (arguments.length > 2)
     throw new CsoundParserError(lintMessage);
-  else
-    original_parseError.apply(this, arguments);
+  original_parseError.apply(this, arguments);
 }).bind(parser);
 
 module.exports = parser;
