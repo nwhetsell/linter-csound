@@ -806,7 +806,6 @@ lexer.expandMacro = (function(YY_START) {
   }
   const preprocessor = this.makePreprocessor(macro.body);
   preprocessor.filePath = this.filePath;
-  preprocessor.isScorePreprocessor = this.isScorePreprocessor;
   Object.assign(preprocessor.macrosByName, macrosByName);
   try {
     preprocessor.lex();
@@ -865,6 +864,7 @@ lexer.makePreprocessor = (function(input) {
   const preprocessor = require(__filename);
   preprocessor.setInput(input);
   Object.assign(preprocessor.macrosByName, this.macrosByName);
+  preprocessor.isScorePreprocessor = this.isScorePreprocessor;
   return preprocessor;
 }).bind(lexer);
 
