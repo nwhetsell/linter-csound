@@ -37,7 +37,7 @@ endif "#end"(?:"if")?\b
 %x after_macro_parameter_name
 %x after_macro_parameter_name_separator
 %s before_macro_body
-%s macro_body
+%x macro_body
 
 %s undef_directive
 
@@ -412,7 +412,8 @@ endif "#end"(?:"if")?\b
   this.messages.push(message);
 %}
 
-<macro_body>("\#"|[^#])+ this.macro.body = yytext;
+<macro_body>"\\#" this.macro.body += '#';
+<macro_body>[^#] this.macro.body += yytext;
 <macro_body>"#"
 %{
   this.startRanges.pop();
