@@ -8,7 +8,7 @@ This [Atom](https://atom.io/) package adds syntax checking for [Csound](https://
 
 ## linter-csound’s Orchestra Parser
 
-To check the syntax of orchestras, linter-csound uses a [preprocessor and parser](https://github.com/nwhetsell/linter-csound/tree/master/lib/csound-parser) generated using the [GerHobbelt fork](https://github.com/GerHobbelt/jison) of [Jison](https://zaa.ch/jison/). To generate the preprocessor and parser on macOS, open a Terminal, `cd` to linter-csound, and run:
+To check the syntax of orchestras, linter-csound uses a [preprocessor and parser](https://github.com/nwhetsell/linter-csound/tree/master/lib/csound-parser) generated using the [GerHobbelt fork](https://github.com/GerHobbelt/jison) of [Jison](https://zaa.ch/jison/). The [grammar](https://github.com/nwhetsell/linter-csound/blob/master/lib/csound-parser/orchestra.jison) used by the parser is based on [this JavaScript grammar](http://www.cjihrig.com/development/jsparser/ecmascript.jison) (which you can read about [here](http://cjihrig.com/blog/creating-a-javascript-parser/)) and [this C grammar](http://www.quut.com/c/ANSI-C-grammar-y-2011.html). To generate the preprocessor and parser on macOS, open a Terminal, `cd` to linter-csound, and run:
 
 ```sh
 npm install https://github.com/GerHobbelt/jison.git
@@ -18,9 +18,7 @@ pushd lib/csound-parser
 popd
 ```
 
-The linter-csound orchestra preprocessor and parser try to match Csound’s behavior, but linter-csound’s implementations are quite different. The [Jison grammar](https://github.com/nwhetsell/linter-csound/blob/master/lib/csound-parser/orchestra.jison) used by the parser is based on [this JavaScript grammar](http://www.cjihrig.com/development/jsparser/ecmascript.jison) (which you can read about [here](http://cjihrig.com/blog/creating-a-javascript-parser/)) and [this C grammar](http://www.quut.com/c/ANSI-C-grammar-y-2011.html).
-
-Here is how linter-csound’s Jison files correspond to Csound’s Flex/Bison files:
+The linter-csound preprocessor and parser try to match Csound’s behavior, but linter-csound’s implementations are quite different. Here is how linter-csound’s Jison files correspond to Csound’s Flex/Bison files:
 
 This Jison file | Corresponds to this Flex/Bison file
 ----------------|------------------------------------
