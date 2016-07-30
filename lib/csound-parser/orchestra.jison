@@ -60,13 +60,16 @@ postfix_expression
     }
   | opcode '(' opcode_inputs ')'
     {
-      $$ = new OpcodeInvocation(@$, {children: [$1, new ArgumentList(@3, {children: $3})]});
+      $$ = new OpcodeExpression(@$, {children: [
+        $1,
+        new ArgumentList(@3, {children: $3})
+      ]});
     }
   | opcode OPCODE_OUTPUT_TYPE_ANNOTATION '(' opcode_inputs ')'
     {
-      $$ = new OpcodeInvocation(@$, {
-        children: [$1, new ArgumentList(@4, {children: $4})],
-        outputType: $2
+      $$ = new OpcodeExpression(@$, {outputType: $2, children: [
+        $1,
+        new ArgumentList(@4, {children: $4})],
       });
     }
   ;
@@ -255,6 +258,20 @@ opcode_inputs
     }
   ;
 
+opcode_expression
+  : opcode
+    {
+      $$ = new OpcodeExpression(@$, {children: [$1]});
+    }
+  | opcode opcode_inputs
+    {
+      $$ = new OpcodeExpression(@$, {children: [
+        $1,
+        new ArgumentList(@2, {children: $2})
+      ]});
+    }
+  ;
+
 assignment_statement
   : declarator '=' conditional_expression NEWLINE
     {
@@ -264,15 +281,7 @@ assignment_statement
     {
       $$ = new CompoundAssignment(@$, {children: [$1, $2, $3]});
     }
-  | opcode_outputs opcode opcode_inputs NEWLINE
-    {
-      $$ = new OpcodeStatement(@$, {children: [
-        new ArgumentList(@1, {children: $1}),
-        $2,
-        new ArgumentList(@3, {children: $3})
-      ]});
-    }
-  | opcode_outputs opcode NEWLINE
+  | opcode_outputs opcode_expression NEWLINE
     {
       $$ = new OpcodeStatement(@$, {children: [
         new ArgumentList(@1, {children: $1}),
@@ -285,8 +294,15 @@ void_opcode_statement
   : void_opcode opcode_inputs NEWLINE
     {
       $$ = new VoidOpcodeStatement(@$, {children: [
-        $1,
-        new ArgumentList(@2, {children: $2})
+        new OpcodeExpression({
+          first_line: @1.first_line,
+          first_column: @1.first_column,
+          last_line: @2.last_line,
+          last_column: @2.last_column
+        }, {children: [
+          $1,
+          new ArgumentList(@2, {children: $2})
+        ]})
       ]});
     }
   ;
@@ -543,7 +559,7 @@ class NumberLiteral extends ASTNode {
 class StringLiteral extends ASTNode {}
 
 class ArrayMember extends ASTNode {}
-class OpcodeInvocation extends ASTNode {}
+class OpcodeExpression extends ASTNode {}
 
 class UnaryPlus extends ASTNode {}
 class UnaryMinus extends ASTNode {}
@@ -561,6 +577,7 @@ class Plus extends ASTNode {}
 class Minus extends ASTNode {}
 class LeftShift extends ASTNode {}
 class RightShift extends ASTNode {}
+
 class LessThan extends ASTNode {}
 class GreaterThan extends ASTNode {}
 class LessThanOrEqual extends ASTNode {}
@@ -572,6 +589,7 @@ class BitwiseXOR extends ASTNode {}
 class BitwiseOR extends ASTNode {}
 class And extends ASTNode {}
 class Or extends ASTNode {}
+
 class BinaryOperation extends ASTNode {
   get operator() { return this.children[1]; }
 }
@@ -598,15 +616,8 @@ class ArrayDeclarator extends ASTNode {}
 class Assignment extends ASTNode {}
 class CompoundAssignment extends ASTNode {}
 class ArgumentList extends ASTNode {}
-class VoidOpcodeStatement extends ASTNode {
-  get identifier() { return this.children[0]; }
-  get inputArgumentList() { return this.children[1]; }
-}
-class OpcodeStatement extends VoidOpcodeStatement {
-  get outputArgumentList() { return this.children[0]; }
-  get identifier() { return this.children[1]; }
-  get inputArgumentList() { return this.children[2]; }
-}
+class VoidOpcodeStatement extends ASTNode {}
+class OpcodeStatement extends VoidOpcodeStatement {}
 
 class Goto extends ASTNode {
   get label() { return this.children[0]; }
@@ -645,7 +656,7 @@ Object.assign(parser, {
   StringLiteral: StringLiteral,
 
   ArrayMember: ArrayMember,
-  OpcodeInvocation: OpcodeInvocation,
+  OpcodeExpression: OpcodeExpression,
 
   UnaryPlus: UnaryPlus,
   UnaryMinus: UnaryMinus,
