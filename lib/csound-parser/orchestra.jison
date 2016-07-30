@@ -79,7 +79,7 @@ unary_operator
   ;
 
 unary_expression
-  :  postfix_expression
+  : postfix_expression
   | unary_operator unary_expression
     {
       $$ = new UnaryOperation(@$, {children: [$1, $2]});
