@@ -234,6 +234,7 @@ endif "#end"(?:"if")?\b
       body: this.macroParameterValue
     };
     if (yytext === ')') {
+      this.startRanges.pop();
       this.popState();
       this.expandMacro(YY_START);
     } else if (yytext !== "'") {
@@ -370,11 +371,10 @@ endif "#end"(?:"if")?\b
     this.popState();
   this.begin('after_macro_parameter_name');
 %}
-<macro_parameter_name_list,macro_parameter_value_list>\)
+<macro_parameter_name_list>\)
 %{
   this.startRanges.pop();
-  if ('macro_parameter_name_list' === this.popState())
-    this.begin('before_macro_body');
+  this.begin('before_macro_body');
 %}
 <macro_parameter_name_list,after_macro_parameter_name_separator>\s+ // Do nothing
 <macro_parameter_name_list,after_macro_parameter_name_separator>.
