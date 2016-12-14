@@ -69,8 +69,7 @@ endif "#end"(?:"if")?\b
 %{
   this.currentTextNode = null;
   for (let i = yyleng - 1; i > 0; i--) {
-    // TODO: const character
-    var character = yytext.charAt(i);
+    const character = yytext.charAt(i);
     if (character !== '\n' && character !== '\r') {
       this.messages.push({
         type: 'Warning',
@@ -211,8 +210,7 @@ endif "#end"(?:"if")?\b
   {
     const macrosByName = this.macroUse.macrosByName;
     const parameterNameIndex = Object.keys(macrosByName).length;
-    // TODO: const macro
-    var macro = this.macroUse.macro;
+    const macro = this.macroUse.macro;
     if (parameterNameIndex >= macro.parameterNames.length) {
       throw new CsoundPreprocessorError({
         type: 'Error',
@@ -281,8 +279,7 @@ endif "#end"(?:"if")?\b
   {
     let i = yyleng - 1;
     if (yytext.charAt(i) === '.') {
-      // TODO: const character
-      var character = this.input();
+      const character = this.input();
       this.unput(character);
       // This needs to be kept synchronized with the macro name patterns.
       if (!/\w/.test(character)) {
@@ -332,11 +329,9 @@ endif "#end"(?:"if")?\b
     newMacro.name = yytext;
     newMacro.range = this.rangeFromLocation(yylloc);
   }
-  // TODO: const macro
-  var macro = this.macrosByName[newMacro.name];
+  const macro = this.macrosByName[newMacro.name];
   if (macro) {
-    // TODO: const message
-    var message = {
+    const message = {
       type: 'Warning',
       filePath: this.filePath,
       text: `${this.quote(newMacro.name)} macro redefined`,
@@ -440,8 +435,7 @@ endif "#end"(?:"if")?\b
 <before_macro_body>\s+ // Do nothing
 <before_macro_body>[^#]|<<EOF>>
 %{
-  // TODO: const message
-  var message = {
+  const message = {
     type: 'Error',
     filePath: this.filePath,
     text: `Expected ${this.quote('#')} after macro name`,
@@ -571,8 +565,7 @@ endif "#end"(?:"if")?\b
       });
     }
     let includeFilePath = '';
-    // TODO: let character
-    for (var character = this.input(); character !== delimiter; character = this.input()) {
+    for (let character = this.input(); character !== delimiter; character = this.input()) {
       if (character === '\n' || character === '\r' || !character) {
         throw new CsoundPreprocessorError({
           type: 'Error',
