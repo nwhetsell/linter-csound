@@ -939,8 +939,7 @@ lexer.setInput = (function(input, yy) {
   this.includeDepth = 0;
   this.generatedColumnCount = 0;
   this.generatedLineCount = 0;
-  // From cs_init_math_constants_macros in
-  // https://github.com/csound/csound/blob/develop/Engine/csound_pre.lex
+  // https://github.com/csound/csound/search?q=cs_init_math_constants_macros+path%3AEngine+filename%3Acsound_pre.lex
   this.macrosByName = {
     M_E:        {name: 'M_E',        body: '2.71828182845904523536'},
     M_LOG2E:    {name: 'M_LOG2E',    body: '1.44269504088896340736'},
