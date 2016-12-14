@@ -51,7 +51,8 @@ endif "#end"(?:"if")?\b
 %x include_directive
 
 %x macro_parameter_value_list
-%x after_macro_parameter_value
+%x macro_parameter_value
+%x macro_parameter_value_parenthetical
 
 %x next_power_of_2
 %x next_power_of_2_plus_1
@@ -198,10 +199,16 @@ endif "#end"(?:"if")?\b
   this.begin('macro_parameter_value_list');
 %}
 
-<macro_parameter_value_list>[^'#)]+
+<macro_parameter_value_list>[^'#)]
+%{
+  this.unput(yytext);
+  this.begin('macro_parameter_value');
+  this.startRanges.push(this.rangeFromLocation(yylloc));
+  this.macroParameterValue = '';
+%}
+<macro_parameter_value_list>['#)]
 %{
   {
-    this.begin('after_macro_parameter_value');
     const macrosByName = this.macroUse.macrosByName;
     const parameterNameIndex = Object.keys(macrosByName).length;
     // TODO: const macro
@@ -211,7 +218,10 @@ endif "#end"(?:"if")?\b
         type: 'Error',
         filePath: this.filePath,
         text: 'Too many arguments provided to function-like macro',
-        range: this.rangeFromLocation(yylloc),
+        range: [
+          this.startRanges.pop()[0],
+          [yylloc.last_line - 1, yylloc.last_column - 1]
+        ],
         trace: [{
           type: 'Trace',
           filePath: this.filePath,
@@ -223,16 +233,47 @@ endif "#end"(?:"if")?\b
     const macroName = macro.parameterNames[parameterNameIndex];
     macrosByName[macroName] = {
       name: macroName,
-      body: yytext
+      body: this.macroParameterValue
     };
+    if (yytext === ')') {
+      this.popState();
+      this.expandMacro(YY_START);
+    } else if (yytext !== "'") {
+      this.messages.push({
+        type: 'Warning',
+        filePath: this.filePath,
+        text: `${this.quote(yytext)} instead of single quote used to separate macro parameters`,
+        range: this.rangeFromLocation(yylloc)
+      });
+    }
   }
 %}
 
-<after_macro_parameter_value>\)
+<macro_parameter_value>[^'#)]
 %{
+  this.macroParameterValue += yytext;
+  if (yytext === '(')
+    this.begin('macro_parameter_value_parenthetical');
+%}
+<macro_parameter_value>['#)]
+%{
+  this.unput(yytext);
   this.popState();
+%}
+
+<macro_parameter_value_parenthetical>[^()]
+%{
+  this.macroParameterValue += yytext;
+%}
+<macro_parameter_value_parenthetical>\(
+%{
+  this.macroParameterValue += yytext;
+  this.begin('macro_parameter_value_parenthetical');
+%}
+<macro_parameter_value_parenthetical>\)
+%{
+  this.macroParameterValue += yytext;
   this.popState();
-  this.expandMacro(YY_START);
 %}
 
 <INITIAL,quoted_string>{macro_use}
@@ -360,7 +401,7 @@ endif "#end"(?:"if")?\b
   });
 %}
 
-<after_macro_parameter_name,after_macro_parameter_value>['#]
+<after_macro_parameter_name>['#]
 %{
   if (yytext !== "'") {
     this.messages.push({
@@ -370,15 +411,14 @@ endif "#end"(?:"if")?\b
       range: this.rangeFromLocation(yylloc)
     });
   }
-  if ('after_macro_parameter_name' === this.popState())
-    this.begin('after_macro_parameter_name_separator');
+  this.popState()
+  this.begin('after_macro_parameter_name_separator');
 %}
-<after_macro_parameter_name,after_macro_parameter_value>\)
+<after_macro_parameter_name>\)
 %{
-  const wasAfterMacroParameterName = 'after_macro_parameter_name' === this.popState();
   this.popState();
-  if (wasAfterMacroParameterName)
-    this.begin('before_macro_body');
+  this.popState();
+  this.begin('before_macro_body');
 %}
 <after_macro_parameter_name>\s+ // Do nothing
 <after_macro_parameter_name>.
