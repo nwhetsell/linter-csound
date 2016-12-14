@@ -342,7 +342,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %{
   throw new CsoundLexerError({
     type: 'Error',
-    text: 'Expected output type (‘a’ or ‘k’)',
+    text: `Expected output type (${this.quote('a')} or ${this.quote('k')})`,
     range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
   });
 %}
