@@ -723,11 +723,11 @@ class CsoundParserError extends Error {
 
 parser.messages = [];
 
-const original_parseError = parser.parseError;
-parser.parseError = (function(str, hash, lintMessage) {
-  if (arguments.length > 2)
+const original_originalParseError = parser.originalParseError;
+parser.originalParseError = (function(str, hash, lintMessage) {
+  if (arguments.length >= 3)
     throw new CsoundParserError(lintMessage);
-  original_parseError.apply(this, arguments);
+  original_originalParseError.apply(this, arguments);
 }).bind(parser);
 
 module.exports = parser;
