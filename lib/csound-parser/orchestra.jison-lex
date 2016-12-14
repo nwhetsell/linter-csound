@@ -13,7 +13,7 @@ identifier [A-Z_a-z]\w*
 
 decimal_integer \d+
 signed_integer [-+]?{decimal_integer}
-exponent_indicator [e] /* The Csound lexer does not use [eE]. */
+exponent_indicator [Ee]
 exponent {exponent_indicator}{signed_integer}
 decimal_number \d+\.?\d*{exponent}?|\.\d+{exponent}?
 hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
@@ -312,7 +312,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 
 {decimal_number} return 'NUMBER';
 
-"0dbfs"|"k"(?:"r"|"smps")|"nchnls"(?:"_i")?|"sr" return 'GLOBAL_VALUE_IDENTIFIER';
+"0dbfs"|"A4"|"k"(?:"r"|"smps")|"nchnls"(?:"_i")?|"sr" return 'GLOBAL_VALUE_IDENTIFIER';
 
 {identifier}
 %{
