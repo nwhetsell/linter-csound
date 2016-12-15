@@ -9,16 +9,6 @@ orchestraParserPath = path.join __dirname, 'csound-parser', 'orchestra-parser.js
 module.exports =
 LinterCsound =
   provideLinter: ->
-    # Populate a symbol table with Csound’s built-in opcodes.
-    Csound = csound.Create()
-    opcodeList = []
-    csound.NewOpcodeList Csound, opcodeList
-    builtInOpcodeSymbolTable = new SymbolTable()
-    for opcodeEntry in opcodeList
-      builtInOpcodeSymbolTable.addOpcodeEntry opcodeEntry
-    csound.DisposeOpcodeList Csound, opcodeList
-    csound.Destroy Csound
-
     return {
       name: 'Csound'
       grammarScopes: ['source.csound']
@@ -43,7 +33,7 @@ LinterCsound =
           parser = require orchestraParserPath
           parser.yy.pre_parse = () ->
             parser.lexer.sourceMap = preprocessor.sourceMap
-            Object.assign parser.lexer.symbolTable.identifiers, builtInOpcodeSymbolTable.identifiers
+            Object.assign parser.lexer.symbolTable.identifiers, SymbolTable.builtInOpcodeSymbolTable.identifiers
           try
             orchestra = parser.parse preprocessor.getOutput()
           catch error
