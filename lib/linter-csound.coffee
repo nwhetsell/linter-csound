@@ -2,7 +2,7 @@ csound = require 'csound-api'
 path = require 'path'
 preprocessor = require path.join __dirname, 'csound-parser', 'preprocessor.js'
 {Range} = require 'atom'
-SymbolTable = require path.join __dirname, 'csound-symbol-table', 'symbol-table.js'
+SymbolTable = require path.join __dirname, 'csound-parser', 'symbol-table.js'
 
 orchestraParserPath = path.join __dirname, 'csound-parser', 'orchestra-parser.js'
 
