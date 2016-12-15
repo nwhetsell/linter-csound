@@ -67,7 +67,7 @@ postfix_expression
     }
   | opcode OPCODE_OUTPUT_TYPE_ANNOTATION '(' opcode_inputs ')'
     {
-      $$ = new OpcodeExpression(@$, {outputType: $2, children: [
+      $$ = new OpcodeExpression(@$, {outputTypeAnnotation: $2, children: [
         $1,
         new ArgumentList(@4, {children: $4})],
       });
@@ -480,14 +480,14 @@ instrument
 opcode_output_types
   : OPCODE_OUTPUT_TYPES
     {
-      $$ = new OpcodeOutputTypes(@$, {string: $1});
+      $$ = new OpcodeOutputTypeSignature(@$, {string: $1});
     }
   ;
 
 opcode_input_types
   : OPCODE_INPUT_TYPES
     {
-      $$ = new OpcodeInputTypes(@$, {string: $1});
+      $$ = new OpcodeInputTypeSignature(@$, {string: $1});
     }
   ;
 
@@ -640,8 +640,8 @@ class Instrument extends ASTNode {
   get numberAndNameList() { return this.children[0]; }
 }
 
-class OpcodeOutputTypes extends ASTNode {}
-class OpcodeInputTypes extends ASTNode {}
+class OpcodeOutputTypeSignature extends ASTNode {}
+class OpcodeInputTypeSignature extends ASTNode {}
 class Opcode extends ASTNode {
   get name() { return this.children[0]; }
   get outputTypes() { return this.children[1]; }
@@ -706,8 +706,8 @@ Object.assign(parser, {
   InstrumentNumberAndNameList: InstrumentNumberAndNameList,
   Instrument: Instrument,
 
-  OpcodeOutputTypes: OpcodeOutputTypes,
-  OpcodeInputTypes: OpcodeInputTypes,
+  OpcodeOutputTypeSignature: OpcodeOutputTypeSignature,
+  OpcodeInputTypeSignature: OpcodeInputTypeSignature,
   Opcode: Opcode,
 
   Orchestra: Orchestra

@@ -24,9 +24,9 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 
 %x after_opcode_keyword
 %x after_opcode_name
-%x before_opcode_output_types
-%x after_opcode_output_types
-%x before_opcode_input_types
+%x before_opcode_output_type_signature
+%x after_opcode_output_type_signature
+%x before_opcode_input_type_signature
 
 %x opcode_output_type_annotation
 
@@ -246,7 +246,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 <after_opcode_name>","{optional_whitespace_and_newline}
 %{
   this.popState();
-  this.begin('before_opcode_output_types');
+  this.begin('before_opcode_output_type_signature');
   return ',';
 %}
 <after_opcode_name>[^,]
@@ -258,49 +258,51 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
   });
 %}
 
-<before_opcode_output_types>"0"|(?:[aikftSK](?:\\[\\])*)+
+/* https://csound.github.io/docs/manual/opcode.html */
+<before_opcode_output_type_signature>"0"|(?:[aikftSK](?:\\[\\])*)+
 %{
   this.popState();
   this.opcodeEntry.outypes = yytext;
-  this.begin('after_opcode_output_types');
+  this.begin('after_opcode_output_type_signature');
   return 'OPCODE_OUTPUT_TYPES';
 %}
-<before_opcode_output_types>.
+<before_opcode_output_type_signature>.
 %{
   throw new CsoundLexerError({
     type: 'Error',
-    text: 'Expected output types',
+    text: 'Expected output type signature',
     range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
   });
 %}
 
-<after_opcode_output_types>","{optional_whitespace_and_newline}
+<after_opcode_output_type_signature>","{optional_whitespace_and_newline}
 %{
   this.popState();
-  this.begin('before_opcode_input_types');
+  this.begin('before_opcode_input_type_signature');
   return ',';
 %}
-<after_opcode_output_types>[^,]
+<after_opcode_output_type_signature>[^,]
 %{
   throw new CsoundLexerError({
     type: 'Error',
-    text: 'Expected comma after opcode output types',
+    text: 'Expected comma after output type signature',
     range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
   });
 %}
 
-<before_opcode_input_types>"0"|(?:[aijkftKOJVPopS](?:\\[\\])*)+
+/* https://csound.github.io/docs/manual/opcode.html */
+<before_opcode_input_type_signature>"0"|(?:[aijkftKOJVPopS](?:\\[\\])*)+
 %{
   this.popState();
   this.opcodeEntry.intypes = yytext;
   this.symbolTable.addOpcodeEntry(this.opcodeEntry);
   return 'OPCODE_INPUT_TYPES';
 %}
-<before_opcode_input_types>.
+<before_opcode_input_type_signature>.
 %{
   throw new CsoundLexerError({
     type: 'Error',
-    text: 'Expected opcode input types',
+    text: 'Expected input type signature',
     range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
   });
 %}
