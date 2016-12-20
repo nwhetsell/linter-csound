@@ -337,6 +337,7 @@ then_statement
     }
   | THEN error
     {
+      $$ = new Then(@$);
       parser.messages.push({
         type: 'Error',
         text: 'Expected newline',
@@ -477,27 +478,27 @@ instrument
     }
   ;
 
-opcode_output_types
-  : OPCODE_OUTPUT_TYPES
+opcode_output_type_signature
+  : OPCODE_OUTPUT_TYPE_SIGNATURE
     {
       $$ = new OpcodeOutputTypeSignature(@$, {string: $1});
     }
   ;
 
-opcode_input_types
-  : OPCODE_INPUT_TYPES
+opcode_input_type_signature
+  : OPCODE_INPUT_TYPE_SIGNATURE
     {
       $$ = new OpcodeInputTypeSignature(@$, {string: $1});
     }
   ;
 
 opcode_definition
-  : OPCODE identifier ',' opcode_output_types ',' opcode_input_types NEWLINE statements ENDOP NEWLINE
+  : OPCODE identifier ',' opcode_output_type_signature ',' opcode_input_type_signature NEWLINE statements ENDOP NEWLINE
     {
       $8.splice(0, 0, $2, $4, $6);
       $$ = new Opcode(@$, {children: $8});
     }
-  | OPCODE identifier ',' opcode_output_types ',' opcode_input_types NEWLINE ENDOP NEWLINE
+  | OPCODE identifier ',' opcode_output_type_signature ',' opcode_input_type_signature NEWLINE ENDOP NEWLINE
     {
       $$ = new Opcode(@$, {children: [$2, $4, $6]});
     }

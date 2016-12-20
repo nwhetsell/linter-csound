@@ -264,7 +264,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
   this.popState();
   this.opcodeOutputTypeSignature = (yytext === '0') ? '' : yytext;
   this.begin('after_opcode_output_type_signature');
-  return 'OPCODE_OUTPUT_TYPES';
+  return 'OPCODE_OUTPUT_TYPE_SIGNATURE';
 %}
 <before_opcode_output_type_signature>.
 %{
@@ -295,7 +295,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %{
   this.popState();
   this.symbolTable.addOpcode(this.opcodeName, {[(yytext === '0') ? '' : yytext]: [this.opcodeOutputTypeSignature]});
-  return 'OPCODE_INPUT_TYPES';
+  return 'OPCODE_INPUT_TYPE_SIGNATURE';
 %}
 <before_opcode_input_type_signature>.
 %{
