@@ -44,7 +44,7 @@ primary_expression
     }
   | error
     {
-      parser.parseError('', {}, {
+      parser.addError({
         type: 'Error',
         text: 'Expected expression',
         range: parser.lexer.rangeFromPosition(@$.first_line, @$.first_column)
@@ -316,9 +316,9 @@ goto_statement
     {
       $$ = new Goto(@$, {children: [$2]});
     }
-  | GOTO error
+  | GOTO error NEWLINE
     {
-      parser.messages.push({
+      parser.addError({
         type: 'Error',
         text: 'Expected newline',
         range: parser.lexer.rangeFromPosition(@1.last_line, @1.last_column)
@@ -335,10 +335,9 @@ then_statement
     {
       $$ = new Then(@$);
     }
-  | THEN error
+  | THEN error NEWLINE
     {
-      $$ = new Then(@$);
-      parser.messages.push({
+      parser.addError({
         type: 'Error',
         text: 'Expected newline',
         range: parser.lexer.rangeFromPosition(@1.last_line, @1.last_column)
@@ -714,6 +713,19 @@ Object.assign(parser, {
   Orchestra: Orchestra
 });
 
+parser.addError = (function(error) {
+  this.messages.push(error);
+  if (this.messages.length === 10) {
+    this.parseError('', {}, {
+      type: 'Error',
+      text: 'Too many errors emitted, stopping now',
+      range: error.range
+    });
+  }
+}).bind(parser);
+
+parser.messages = [];
+
 class CsoundParserError extends Error {
   constructor(lintMessage) {
     super(lintMessage.text);
@@ -721,8 +733,6 @@ class CsoundParserError extends Error {
     this.lintMessage = lintMessage;
   }
 }
-
-parser.messages = [];
 
 const original_originalParseError = parser.originalParseError;
 parser.originalParseError = (function(str, hash, lintMessage) {

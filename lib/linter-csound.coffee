@@ -40,14 +40,14 @@ LinterCsound =
             lintMessage = error.hash.exception?.lintMessage
             if lintMessage
               lintMessage.filePath = editor.getPath()
-              parser.messages = [lintMessage]
+              parser.messages.push lintMessage
             else
-              parser.messages = [{
+              parser.messages.push {
                 type: 'Error'
                 filePath: editor.getPath()
-                text: 'Error'
+                text: error.message
                 range: parser.lexer.rangeFromPosition error.hash.loc.first_line, error.hash.loc.first_column
-              }]
+              }
 
           # Combine messages from preprocessor, lexer, and parser.
           messages = preprocessor.messages

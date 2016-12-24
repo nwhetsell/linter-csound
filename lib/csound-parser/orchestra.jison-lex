@@ -5,9 +5,9 @@
  * comments. Also, all line endings must be line feeds (\n, U+000A).
  */
 
+/* These patterns need to be kept synchronized with skipWhitespaceAndNewline. */
 whitespace [ \t]+
 optional_whitespace [ \t]*
-optional_whitespace_and_newline {optional_whitespace}\n?
 
 identifier [A-Z_a-z]\w*
 
@@ -38,46 +38,52 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 
 <*>{whitespace} // Do nothing
 
-"("{optional_whitespace_and_newline}  return '(';
+/*
+ * The Csound orchestra lexer allows most punctuation to be optionally followed
+ * by whitespace and a newline, but the whitespace and newline is considered
+ * part of the punctuation token. This throws off error reporting, so skip the
+ * whitespace and newline.
+ */
+"("  this.skipWhitespaceAndNewline(); return '(';
 ")"                                   return ')';
-"["{optional_whitespace_and_newline}  return '[';
+"["  this.skipWhitespaceAndNewline(); return '[';
 "]"                                   return ']';
-"+"{optional_whitespace_and_newline}  return '+';
-"-"{optional_whitespace_and_newline}  return '-';
-"*"{optional_whitespace_and_newline}  return '*';
-"/"{optional_whitespace_and_newline}  return '/';
-"%"{optional_whitespace_and_newline}  return '%';
-"^"{optional_whitespace_and_newline}  return '^';
-"?"{optional_whitespace_and_newline}  return '?';
+"+"  this.skipWhitespaceAndNewline(); return '+';
+"-"  this.skipWhitespaceAndNewline(); return '-';
+"*"  this.skipWhitespaceAndNewline(); return '*';
+"/"  this.skipWhitespaceAndNewline(); return '/';
+"%"  this.skipWhitespaceAndNewline(); return '%';
+"^"  this.skipWhitespaceAndNewline(); return '^';
+"?"  this.skipWhitespaceAndNewline(); return '?';
 ":"                                   return ':';
-","{optional_whitespace_and_newline}  return ',';
-"!"{optional_whitespace_and_newline}  return '!';
+","  this.skipWhitespaceAndNewline(); return ',';
+"!"  this.skipWhitespaceAndNewline(); return '!';
 
 /*
- * The -> operator is called S_ELIPSIS in
- * https://github.com/csound/csound/blob/develop/Engine/csound_orc.lex. It
- * appears to be undocumented.
+ * The -> operator is called S_ELIPSIS
+ * <https://github.com/csound/csound/search?q=S_ELIPSIS+path%3AEngine+filename%3Acsound_orc.lex>.
+ * It appears to be undocumented.
  */
 "->"                                  return '->';
 
-"!="{optional_whitespace_and_newline} return '!=';
-"&&"{optional_whitespace_and_newline} return '&&';
-"||"{optional_whitespace_and_newline} return '||';
-"<<"{optional_whitespace_and_newline} return '<<';
-">>"{optional_whitespace_and_newline} return '>>';
-"<"{optional_whitespace_and_newline}  return '<';
-"<="{optional_whitespace_and_newline} return '<=';
-"=="{optional_whitespace_and_newline} return '==';
-"+="{optional_whitespace_and_newline} return '+=';
-"-="{optional_whitespace_and_newline} return '-=';
-"*="{optional_whitespace_and_newline} return '*=';
-"/="{optional_whitespace_and_newline} return '/=';
-"="{optional_whitespace_and_newline}  return '=';
-">"{optional_whitespace_and_newline}  return '>';
-">="{optional_whitespace_and_newline} return '>=';
-"|"{optional_whitespace_and_newline}  return '|';
-"&"{optional_whitespace_and_newline}  return '&';
-"#"{optional_whitespace_and_newline}  return '#';
+"!=" this.skipWhitespaceAndNewline(); return '!=';
+"&&" this.skipWhitespaceAndNewline(); return '&&';
+"||" this.skipWhitespaceAndNewline(); return '||';
+"<<" this.skipWhitespaceAndNewline(); return '<<';
+">>" this.skipWhitespaceAndNewline(); return '>>';
+"<"  this.skipWhitespaceAndNewline(); return '<';
+"<=" this.skipWhitespaceAndNewline(); return '<=';
+"==" this.skipWhitespaceAndNewline(); return '==';
+"+=" this.skipWhitespaceAndNewline(); return '+=';
+"-=" this.skipWhitespaceAndNewline(); return '-=';
+"*=" this.skipWhitespaceAndNewline(); return '*=';
+"/=" this.skipWhitespaceAndNewline(); return '/=';
+"="  this.skipWhitespaceAndNewline(); return '=';
+">"  this.skipWhitespaceAndNewline(); return '>';
+">=" this.skipWhitespaceAndNewline(); return '>=';
+"|"  this.skipWhitespaceAndNewline(); return '|';
+"&"  this.skipWhitespaceAndNewline(); return '&';
+"#"  this.skipWhitespaceAndNewline(); return '#';
 
 /*
  * For backward compatibility with ISO/IEC 8859-1
@@ -88,7 +94,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
  * as the single byte A2.) Strings in JavaScript are always Unicode, so just use
  * a literal ¬.
  */
-[~¬]{optional_whitespace_and_newline} return '~';
+[~¬] this.skipWhitespaceAndNewline(); return '~';
 
 "if"       return 'IF';
 "then"     return 'THEN';
@@ -138,7 +144,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
       ]),
       trace: [{
         type: 'Trace',
-        text: `Label ${this.quote(labelName)} is defined here`,
+        text: `Label ${this.quote(labelName)} is here`,
         range: label.range
       }]
     });
@@ -185,10 +191,11 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
   });
 %}
 
-<after_instrument_number_or_identifier>","{optional_whitespace_and_newline}
+<after_instrument_number_or_identifier>","
 %{
   this.popState();
   this.begin('after_instr_keyword');
+  this.skipWhitespaceAndNewline();
   return ',';
 %}
 <after_instrument_number_or_identifier>\n
@@ -243,10 +250,11 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
   });
 %}
 
-<after_opcode_name>","{optional_whitespace_and_newline}
+<after_opcode_name>","
 %{
   this.popState();
   this.begin('before_opcode_output_type_signature');
+  this.skipWhitespaceAndNewline();
   return ',';
 %}
 <after_opcode_name>[^,]
@@ -275,10 +283,11 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
   });
 %}
 
-<after_opcode_output_type_signature>","{optional_whitespace_and_newline}
+<after_opcode_output_type_signature>","
 %{
   this.popState();
   this.begin('before_opcode_input_type_signature');
+  this.skipWhitespaceAndNewline();
   return ',';
 %}
 <after_opcode_output_type_signature>[^,]
@@ -381,6 +390,8 @@ lexer.rangeFromPosition = (function(line, column) {
 
 const original_setInput = lexer.setInput;
 lexer.setInput = (function(input, yy) {
+  if (yy && !yy.parser)
+    return;
   this.messages = [];
   this.sourceMap = {
     sourceLocation: location => location,
@@ -389,6 +400,17 @@ lexer.setInput = (function(input, yy) {
   const SymbolTable = require(require('path').join(__dirname, 'symbol-table.js'));
   this.symbolTable = new SymbolTable();
   return original_setInput.apply(this, arguments);
+}).bind(lexer);
+
+lexer.skipWhitespaceAndNewline = (function(yylloc) {
+  for (let character = this.input(); character !== null; character = this.input()) {
+    // This needs to be kept synchronized with the whitespace patterns.
+    if (character !== ' ' && character !== '\t') {
+      if (character !== '\n')
+        this.unput(character);
+      break;
+    }
+  }
 }).bind(lexer);
 
 class CsoundLexerError extends Error {
