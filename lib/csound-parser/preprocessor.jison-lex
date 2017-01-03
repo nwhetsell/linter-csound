@@ -353,7 +353,6 @@ endif "#end"(?:"if")?\b
   this.macro = newMacro;
   this.macrosByName[newMacro.name] = newMacro;
 %}
-<define_directive>\s+ // Do nothing
 
 <macro_parameter_name_list,after_macro_parameter_name_separator>{identifier}
 %{
