@@ -7,7 +7,7 @@ macro_use \${identifier}\.?
 
 /*
  * To match the behavior of the Csound preprocessor, enclose these directives in
- * non-capturing groups so that jison-lex does not append word break patterns to
+ * non-capturing groups so that jison-lex doesn’t append word break patterns to
  * them. Also, #define is the only directive that allows whitespace after the #.
  */
 include (?:"#include")
@@ -52,6 +52,8 @@ endif "#end"(?:"if")?\b
 
 %x macro_parameter_value_list
 %x macro_parameter_value
+%x macro_parameter_value_quoted_string
+%x macro_parameter_value_braced_string
 %x macro_parameter_value_parenthetical
 
 %x next_power_of_2
@@ -65,7 +67,7 @@ endif "#end"(?:"if")?\b
 
 %%
 
-<INITIAL,quoted_string>{line_continuation}
+<INITIAL,quoted_string,macro_parameter_value_quoted_string>{line_continuation}
 %{
   this.currentTextNode = null;
   for (let i = yyleng - 1; i > 0; i--) {
@@ -142,7 +144,7 @@ endif "#end"(?:"if")?\b
   this.popState();
   this.addText(yytext);
 %}
-<quoted_string>{newline}|<<EOF>>
+<quoted_string,macro_parameter_value_quoted_string>{newline}|<<EOF>>
 %{
   this.messages.push({
     type: 'Error',
@@ -165,7 +167,7 @@ endif "#end"(?:"if")?\b
   this.popState();
   this.addText(yytext);
 %}
-<braced_string><<EOF>>
+<braced_string,macro_parameter_value_braced_string><<EOF>>
 %{
   this.messages.push({
     type: 'Error',
@@ -175,7 +177,7 @@ endif "#end"(?:"if")?\b
   });
 %}
 
-<INITIAL,quoted_string>{macro_use}\(
+<INITIAL,quoted_string,macro_parameter_value_quoted_string>{macro_use}\(
 %{
   let i = yyleng - 2;
   if (yytext.charAt(i) === '.') {
@@ -248,34 +250,72 @@ endif "#end"(?:"if")?\b
   }
 %}
 
-<macro_parameter_value>[^'#)]
-%{
-  this.macroParameterValue += yytext;
-  if (yytext === '(')
-    this.begin('macro_parameter_value_parenthetical');
-%}
 <macro_parameter_value>['#)]
 %{
   this.unput(yytext);
   this.popState();
 %}
-
-<macro_parameter_value_parenthetical>[^()]
+<macro_parameter_value>\"
 %{
+  this.begin('macro_parameter_value_quoted_string');
+  this.startRanges.push(this.rangeFromLocation(yylloc));
   this.macroParameterValue += yytext;
 %}
-<macro_parameter_value_parenthetical>\(
+<macro_parameter_value>"{{"
 %{
+  this.begin('macro_parameter_value_braced_string');
+  this.startRanges.push(this.rangeFromLocation(yylloc));
   this.macroParameterValue += yytext;
+%}
+<macro_parameter_value>\(
+%{
   this.begin('macro_parameter_value_parenthetical');
-%}
-<macro_parameter_value_parenthetical>\)
-%{
   this.macroParameterValue += yytext;
-  this.popState();
 %}
 
-<INITIAL,quoted_string>{macro_use}
+<macro_parameter_value_quoted_string,macro_parameter_value_braced_string,macro_parameter_value_parenthetical>\)
+%{
+  this.macroParameterValue += yytext;
+  if ('macro_parameter_value_parenthetical' === YY_START)
+    this.popState();
+  const fix = {
+    range: this.rangeFromLocation(yylloc),
+    newText: '\\)'
+  };
+  this.messages.push({
+    type: 'Error',
+    filePath: this.filePath,
+    text: `${this.quote(yytext)} must be replaced with ${this.quote('\\)')}`,
+    range: fix.range,
+    fix: fix
+  });
+%}
+
+<macro_parameter_value_quoted_string,macro_parameter_value_braced_string>"\\)" this.macroParameterValue += ')';
+
+<macro_parameter_value_quoted_string>\"
+%{
+  this.startRanges.pop();
+  this.popState();
+  this.macroParameterValue += yytext;
+%}
+
+<macro_parameter_value_braced_string>"}}"
+%{
+  this.startRanges.pop();
+  this.popState();
+  this.macroParameterValue += yytext;
+%}
+
+<macro_parameter_value_parenthetical>\(    this.macroParameterValue += yytext; this.begin(YY_START);
+<macro_parameter_value_parenthetical>"\\)" this.macroParameterValue += ')';    this.popState();
+
+<macro_parameter_value,macro_parameter_value_quoted_string,macro_parameter_value_braced_string,macro_parameter_value_parenthetical>.|{newline}
+%{
+  this.macroParameterValue += yytext;
+%}
+
+<INITIAL,quoted_string,macro_parameter_value_quoted_string>{macro_use}
 %{
   {
     let i = yyleng - 1;
@@ -490,7 +530,7 @@ endif "#end"(?:"if")?\b
   this.begin(yytext.startsWith('#ifdef') ? 'ifdef_directive' : 'ifndef_directive');
   this.startRanges.push(this.rangeFromLocation(yylloc));
 %}
-<ifdef_directive>{identifier} this.popState(); this.begin(this.macrosByName[yytext] ? 'ifdef_true' : 'ifdef_false');
+<ifdef_directive>{identifier}  this.popState(); this.begin( this.macrosByName[yytext] ? 'ifdef_true' : 'ifdef_false');
 <ifndef_directive>{identifier} this.popState(); this.begin(!this.macrosByName[yytext] ? 'ifdef_true' : 'ifdef_false');
 
 <ifdef_true,ifdef_false,else_true,else_false>{endif}
@@ -509,9 +549,9 @@ endif "#end"(?:"if")?\b
   });
 %}
 
-<ifdef_true>{else} this.popState(); this.begin('else_false');
-
+<ifdef_true>{else}  this.popState(); this.begin('else_false');
 <ifdef_false>{else} this.popState(); this.begin('else_true');
+
 <ifdef_false,else_false>.|{newline} // Do nothing
 
 <ifdef_true,ifdef_false,else_true,else_false><<EOF>>
@@ -902,8 +942,8 @@ lexer.lex = (function() {
 }).bind(lexer);
 
 lexer.makePreprocessor = (function(input) {
-  // A function like yy_scan_string is not available in jison-lex. Instead,
-  // this function creates a new preprocessor, taking care to avoid getting the
+  // A function like yy_scan_string is unavailable in jison-lex. Instead, this
+  // function creates a new preprocessor, taking care to avoid getting the
   // current preprocessor in the Node.js module cache.
   delete require.cache[__filename];
   const preprocessor = require(__filename);
