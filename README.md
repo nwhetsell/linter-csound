@@ -11,7 +11,7 @@ This [Atom](https://atom.io/) package adds syntax checking for [Csound](https://
 To check the syntax of orchestras, linter-csound uses a [preprocessor and parser](https://github.com/nwhetsell/linter-csound/tree/master/lib/csound-parser) generated using the [GerHobbelt fork](https://github.com/GerHobbelt/jison) of [Jison](https://zaa.ch/jison/). The [grammar](https://github.com/nwhetsell/linter-csound/blob/master/lib/csound-parser/orchestra.jison) used by the parser is based on [this JavaScript grammar](http://www.cjihrig.com/development/jsparser/ecmascript.jison) (which you can read about [here](http://cjihrig.com/blog/creating-a-javascript-parser/)) and [this C grammar](http://www.quut.com/c/ANSI-C-grammar-y-2011.html). To generate the preprocessor and parser on macOS, open a Terminal, `cd` to linter-csound, and run:
 
 ```sh
-npm install https://github.com/GerHobbelt/jison/archive/0.4.18-160.tar.gz
+npm install https://github.com/GerHobbelt/jison/archive/0.4.18-163.tar.gz
 pushd lib/csound-parser
 ../../node_modules/jison-lex/cli.js preprocessor.jison-lex --outfile preprocessor.js
 ../../node_modules/jison/lib/cli.js orchestra.jison orchestra.jison-lex --outfile orchestra-parser.js
