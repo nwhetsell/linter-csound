@@ -425,6 +425,14 @@ statement
     {
       $$ = new Empty(@$);
     }
+  | error
+    {
+      parser.addError({
+        type: 'Error',
+        text: 'Invalid statement',
+        range: parser.lexer.rangeFromPosition(@1.first_line, @1.first_column)
+      });
+    }
   ;
 
 statements
