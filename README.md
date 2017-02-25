@@ -13,8 +13,8 @@ To check the syntax of orchestras, linter-csound uses a [preprocessor and parser
 ```sh
 npm install https://github.com/GerHobbelt/jison/archive/0.4.18-163.tar.gz
 pushd lib/csound-parser
-../../node_modules/jison-lex/cli.js preprocessor.jison-lex --outfile preprocessor.js
-../../node_modules/jison/lib/cli.js orchestra.jison orchestra.jison-lex --outfile orchestra-parser.js
+../../node_modules/jison-lex/cli.js preprocessor.jisonlex --outfile preprocessor.js
+../../node_modules/jison/lib/cli.js orchestra.jison orchestra.jisonlex --outfile orchestra-parser.js
 popd
 ```
 
@@ -22,8 +22,8 @@ The linter-csound preprocessor and parser try to match Csound’s behavior, but 
 
 This Jison file | Corresponds to this Flex/Bison file
 ----------------|------------------------------------
-[preprocessor.jison-lex](https://github.com/nwhetsell/linter-csound/blob/master/lib/csound-parser/preprocessor.jison-lex) | [csound_pre.lex](https://github.com/csound/csound/blob/develop/Engine/csound_pre.lex)
-[orchestra.jison-lex](https://github.com/nwhetsell/linter-csound/blob/master/lib/csound-parser/orchestra.jison-lex) | [csound_orc.lex](https://github.com/csound/csound/blob/develop/Engine/csound_orc.lex)
+[preprocessor.jisonlex](https://github.com/nwhetsell/linter-csound/blob/master/lib/csound-parser/preprocessor.jisonlex) | [csound_pre.lex](https://github.com/csound/csound/blob/develop/Engine/csound_pre.lex)
+[orchestra.jisonlex](https://github.com/nwhetsell/linter-csound/blob/master/lib/csound-parser/orchestra.jisonlex) | [csound_orc.lex](https://github.com/csound/csound/blob/develop/Engine/csound_orc.lex)
 [orchestra.jison](https://github.com/nwhetsell/linter-csound/blob/master/lib/csound-parser/orchestra.jison) | [csound_orc.y](https://github.com/csound/csound/blob/develop/Engine/csound_orc.y)
 
 ### Known Differences from Csound’s Preprocessor

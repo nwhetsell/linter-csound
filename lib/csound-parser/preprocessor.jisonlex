@@ -7,7 +7,7 @@ macro_use \${identifier}\.?
 
 /*
  * To match the behavior of the Csound preprocessor, enclose these directives in
- * non-capturing groups so that jison-lex doesn’t append word break patterns to
+ * non-capturing groups so that Jison Lex doesn’t append word break patterns to
  * them. Also, #define is the only directive that allows whitespace after the #.
  */
 include (?:"#include")
@@ -942,7 +942,7 @@ lexer.lex = (function() {
 }).bind(lexer);
 
 lexer.makePreprocessor = (function(input) {
-  // A function like yy_scan_string is unavailable in jison-lex. Instead, this
+  // A function like yy_scan_string is unavailable in Jison Lex. Instead, this
   // function creates a new preprocessor, taking care to avoid getting the
   // current preprocessor in the Node.js module cache.
   delete require.cache[__filename];
