@@ -120,7 +120,7 @@ endif "#end"(?:"if")?\b
 
 {single_line_comment} this.addNewline();
 
-<quoted_string,braced_string>"\\"[^abfnrtv"\\\\]
+<quoted_string,braced_string>"\\"[^abfnrtv"\\]
 %{
   this.addText(yytext);
   this.messages.push({
@@ -307,8 +307,8 @@ endif "#end"(?:"if")?\b
   this.macroParameterValue += yytext;
 %}
 
-<macro_parameter_value_parenthetical>\(    this.macroParameterValue += yytext; this.begin(YY_START);
-<macro_parameter_value_parenthetical>"\\)" this.macroParameterValue += ')';    this.popState();
+<macro_parameter_value_parenthetical>\(   this.macroParameterValue += yytext; this.begin(YY_START);
+<macro_parameter_value_parenthetical>\\\) this.macroParameterValue += ')';    this.popState();
 
 <macro_parameter_value,macro_parameter_value_quoted_string,macro_parameter_value_braced_string,macro_parameter_value_parenthetical>.|{newline}
 %{
