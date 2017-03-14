@@ -22,7 +22,7 @@ single_line_comment (?:";"|"//").*(?:{newline}|$)
  * The Csound preprocessor uses ; instead of a more general single-line comment
  * pattern.
  */
-line_continuation "\\"[ \t]*(?:";".*)?{newline}
+line_continuation \\[ \t]*(?:";".*)?{newline}
 
 else "#else"
 endif "#end"(?:"if")?\b
@@ -291,7 +291,7 @@ endif "#end"(?:"if")?\b
   });
 %}
 
-<macro_parameter_value_quoted_string,macro_parameter_value_braced_string>"\\)" this.macroParameterValue += ')';
+<macro_parameter_value_quoted_string,macro_parameter_value_braced_string>\\\) this.macroParameterValue += ')';
 
 <macro_parameter_value_quoted_string>\"
 %{
