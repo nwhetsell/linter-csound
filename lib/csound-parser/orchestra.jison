@@ -46,8 +46,8 @@ primary_expression
     {
       parser.addError({
         type: 'Error',
-        text: 'Expected expression',
-        range: parser.lexer.rangeFromPosition(@$.first_line, @$.first_column)
+        range: parser.lexer.rangeFromPosition(@$.first_line, @$.first_column),
+        text: 'Expected expression'
       });
     }
   ;
@@ -320,8 +320,8 @@ goto_statement
     {
       parser.addError({
         type: 'Error',
-        text: 'Expected newline',
-        range: parser.lexer.rangeFromPosition(@1.last_line, @1.last_column)
+        range: parser.lexer.rangeFromPosition(@1.last_line, @1.last_column),
+        text: 'Expected newline'
       });
     }
   ;
@@ -339,8 +339,8 @@ then_statement
     {
       parser.addError({
         type: 'Error',
-        text: 'Expected newline',
-        range: parser.lexer.rangeFromPosition(@1.last_line, @1.last_column)
+        range: parser.lexer.rangeFromPosition(@1.last_line, @1.last_column),
+        text: 'Expected newline'
       });
     }
   ;
@@ -429,8 +429,8 @@ statement
     {
       parser.addError({
         type: 'Error',
-        text: 'Invalid statement',
-        range: parser.lexer.rangeFromPosition(@1.first_line, @1.first_column)
+        range: parser.lexer.rangeFromPosition(@1.first_line, @1.first_column),
+        text: 'Invalid statement'
       });
     }
   ;
@@ -726,8 +726,8 @@ parser.addError = (function(error) {
   if (this.messages.length === 10) {
     this.parseError('', {}, {
       type: 'Error',
-      text: 'Too many errors emitted, stopping now',
-      range: error.range
+      range: error.range,
+      text: 'Too many errors emitted, stopping now'
     });
   }
 }).bind(parser);

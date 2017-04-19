@@ -107,8 +107,8 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %{
   this.messages.push({
     type: 'Warning',
-    text: `${this.quote(yytext)} instead of ${this.quote('endif')} used to end if statement`,
-    range: this.rangeFromLocation(yylloc)
+    range: this.rangeFromLocation(yylloc),
+    text: `${this.quote(yytext)} instead of ${this.quote('endif')} used to end if statement`
   });
   return 'ENDIF';
 %}
@@ -120,8 +120,8 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %{
   this.messages.push({
     type: 'Warning',
-    text: `${this.quote(yytext)} instead of ${this.quote('od')} used to end loop`,
-    range: this.rangeFromLocation(yylloc)
+    range: this.rangeFromLocation(yylloc),
+    text: `${this.quote(yytext)} instead of ${this.quote('od')} used to end loop`
   });
   return 'OD';
 %}
@@ -137,15 +137,15 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
   if (label) {
     this.messages.push({
       type: 'Warning',
-      text: `Duplicate label ${this.quote(labelName)} ignored`,
       range: this.sourceMap.sourceRange([
         [yylloc.first_line - 1, yylloc.first_column],
         [yylloc.first_line - 1, yylloc.first_column + labelName.length]
       ]),
+      text: `Duplicate label ${this.quote(labelName)} ignored`,
       trace: [{
         type: 'Trace',
-        text: `Label ${this.quote(labelName)} is here`,
-        range: label.range
+        range: label.range,
+        text: `Label ${this.quote(labelName)} is here`
       }]
     });
   } else {
@@ -186,8 +186,8 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %{
   throw new CsoundLexerError({
     type: 'Error',
-    text: 'Expected instrument number or identifier',
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
+    text: 'Expected instrument number or identifier'
   });
 %}
 
@@ -207,8 +207,8 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %{
   throw new CsoundLexerError({
     type: 'Error',
-    text: 'Expected newline after instrument numbers and identifiers',
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
+    text: 'Expected newline after instrument numbers and identifiers'
   });
 %}
 
@@ -222,8 +222,8 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %{
   throw new CsoundLexerError({
     type: 'Error',
-    text: 'Expected instrument identifier',
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
+    text: 'Expected instrument identifier'
   });
 %}
 
@@ -245,8 +245,8 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %{
   throw new CsoundLexerError({
     type: 'Error',
-    text: 'Expected opcode name',
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
+    text: 'Expected opcode name'
   });
 %}
 
@@ -261,8 +261,8 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %{
   throw new CsoundLexerError({
     type: 'Error',
-    text: 'Expected comma after opcode name',
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
+    text: 'Expected comma after opcode name'
   });
 %}
 
@@ -278,8 +278,8 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %{
   throw new CsoundLexerError({
     type: 'Error',
-    text: 'Expected output type signature',
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
+    text: 'Expected output type signature'
   });
 %}
 
@@ -294,8 +294,8 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %{
   throw new CsoundLexerError({
     type: 'Error',
-    text: 'Expected comma after output type signature',
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
+    text: 'Expected comma after output type signature'
   });
 %}
 
@@ -310,8 +310,8 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %{
   throw new CsoundLexerError({
     type: 'Error',
-    text: 'Expected input type signature',
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
+    text: 'Expected input type signature'
   });
 %}
 
@@ -351,8 +351,8 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %{
   throw new CsoundLexerError({
     type: 'Error',
-    text: `Expected output type (${this.quote('a')} or ${this.quote('k')})`,
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
+    text: `Expected output type (${this.quote('a')} or ${this.quote('k')})`
   });
 %}
 
@@ -362,8 +362,8 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %{
   this.messages.push({
     type: 'Error',
-    text: `Unexpected character ${this.quote(yytext)}`,
-    range: this.rangeFromLocation(yylloc)
+    range: this.rangeFromLocation(yylloc),
+    text: `Unexpected character ${this.quote(yytext)}`
   });
 %}
 
