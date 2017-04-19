@@ -74,13 +74,15 @@ endif "#end"(?:"if")?\b
     const character = yytext.charAt(i);
     if (character !== '\n' && character !== '\r') {
       this.messages.push({
-        type: 'Warning',
-        filePath: this.filePath,
-        range: [
-          [yylloc.first_line - 1, yylloc.first_column],
-          [yylloc.first_line - 1, yylloc.first_column + 1]
-        ],
-        text: 'Line continuation is not followed immediately by newline'
+        severity: 'warning',
+        location: {
+          file: this.filePath,
+          position: [
+            [yylloc.first_line - 1, yylloc.first_column],
+            [yylloc.first_line - 1, yylloc.first_column + 1]
+          ]
+        },
+        excerpt: 'Line continuation is not followed immediately by newline'
       });
       break;
     }
@@ -96,10 +98,12 @@ endif "#end"(?:"if")?\b
 <block_comment>"/*"
 %{
   this.messages.push({
-    type: 'Warning',
-    filePath: this.filePath,
-    range: this.rangeFromLocation(yylloc),
-    text: `${this.quote(yytext)} in block comment`
+    severity: 'warning',
+    location: {
+      file: this.filePath,
+      position: this.rangeFromLocation(yylloc)
+    },
+    excerpt: `${this.quote(yytext)} in block comment`
   });
 %}
 <block_comment>"*/"
@@ -111,10 +115,12 @@ endif "#end"(?:"if")?\b
 <block_comment><<EOF>>
 %{
   this.messages.push({
-    type: 'Error',
-    filePath: this.filePath,
-    range: this.startRanges.pop(),
-    text: 'Unterminated block comment'
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.startRanges.pop()
+    },
+    excerpt: 'Unterminated block comment'
   });
 %}
 
@@ -124,10 +130,12 @@ endif "#end"(?:"if")?\b
 %{
   this.addText(yytext);
   this.messages.push({
-    type: 'Warning',
-    filePath: this.filePath,
-    range: this.rangeFromLocation(yylloc),
-    text: `Unknown escape sequence ${this.quote(yytext)}`
+    severity: 'warning',
+    location: {
+      file: this.filePath,
+      position: this.rangeFromLocation(yylloc)
+    },
+    excerpt: `Unknown escape sequence ${this.quote(yytext)}`
   });
 %}
 
@@ -147,10 +155,12 @@ endif "#end"(?:"if")?\b
 <quoted_string,macro_parameter_value_quoted_string>{newline}|<<EOF>>
 %{
   this.messages.push({
-    type: 'Error',
-    filePath: this.filePath,
-    range: this.startRanges.pop(),
-    text: `Missing terminating ${this.quote('"')}`
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.startRanges.pop()
+    },
+    excerpt: `Missing terminating ${this.quote('"')}`
   });
 %}
 
@@ -170,10 +180,12 @@ endif "#end"(?:"if")?\b
 <braced_string,macro_parameter_value_braced_string><<EOF>>
 %{
   this.messages.push({
-    type: 'Error',
-    filePath: this.filePath,
-    range: this.startRanges.pop(),
-    text: `Missing terminating ${this.quote('}}')}`
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.startRanges.pop()
+    },
+    excerpt: `Missing terminating ${this.quote('}}')}`
   });
 %}
 
@@ -182,13 +194,15 @@ endif "#end"(?:"if")?\b
   let i = yyleng - 2;
   if (yytext.charAt(i) === '.') {
     this.messages.push({
-      type: 'Warning',
-      filePath: this.filePath,
-      range: [
-        [yylloc.first_line - 1, yylloc.first_column + i],
-        [yylloc.first_line - 1, yylloc.first_column + i + 1]
-      ],
-      text: `Unnecessary ${this.quote('.')} after macro name`
+      severity: 'warning',
+      location: {
+        file: this.filePath,
+        position: [
+          [yylloc.first_line - 1, yylloc.first_column + i],
+          [yylloc.first_line - 1, yylloc.first_column + i + 1]
+        ]
+      },
+      excerpt: `Unnecessary ${this.quote('.')} after macro name`
     });
   } else {
     i++;
@@ -215,18 +229,22 @@ endif "#end"(?:"if")?\b
     const macro = this.macroUse.macro;
     if (parameterNameIndex >= macro.parameterNames.length) {
       throw new CsoundPreprocessorError({
-        type: 'Error',
-        filePath: this.filePath,
-        range: [
-          this.startRanges.pop()[0],
-          [yylloc.last_line - 1, yylloc.last_column - 1]
-        ],
-        text: 'Too many arguments provided to function-like macro',
+        severity: 'error',
+        location: {
+          file: this.filePath,
+          position: [
+            this.startRanges.pop()[0],
+            [yylloc.last_line - 1, yylloc.last_column - 1]
+          ]
+        },
+        excerpt: 'Too many arguments provided to function-like macro',
         trace: [{
-          type: 'Trace',
-          filePath: this.filePath,
-          range: macro.range,
-          text: `Macro ${this.quote(macro.name)} defined here`
+          severity: 'info',
+          location: {
+            file: this.filePath,
+            position: macro.range
+          },
+          excerpt: `Macro ${this.quote(macro.name)} defined here`
         }]
       });
     }
@@ -241,10 +259,12 @@ endif "#end"(?:"if")?\b
       this.expandMacro(YY_START);
     } else if (yytext !== "'") {
       this.messages.push({
-        type: 'Warning',
-        filePath: this.filePath,
-        range: this.rangeFromLocation(yylloc),
-        text: `${this.quote(yytext)} instead of single quote used to separate macro parameters`
+        severity: 'warning',
+        location: {
+          file: this.filePath,
+          position: this.rangeFromLocation(yylloc)
+        },
+        excerpt: `${this.quote(yytext)} instead of single quote used to separate macro parameters`
       });
     }
   }
@@ -278,16 +298,18 @@ endif "#end"(?:"if")?\b
   this.macroParameterValue += yytext;
   if ('macro_parameter_value_parenthetical' === YY_START)
     this.popState();
-  const fix = {
-    range: this.rangeFromLocation(yylloc),
-    newText: '\\)'
+  const solution = {
+    position: this.rangeFromLocation(yylloc),
+    replaceWith: '\\)'
   };
   this.messages.push({
-    type: 'Error',
-    filePath: this.filePath,
-    range: fix.range,
-    text: `${this.quote(yytext)} must be replaced with ${this.quote('\\)')}`,
-    fix: fix
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: solution.position
+    },
+    excerpt: `${this.quote(yytext)} must be replaced with ${this.quote(solution.replaceWith)}`,
+    solutions: [solution]
   });
 %}
 
@@ -325,13 +347,15 @@ endif "#end"(?:"if")?\b
       // This needs to be kept synchronized with the macro name patterns.
       if (!/\w/.test(character)) {
         this.messages.push({
-          type: 'Warning',
-          filePath: this.filePath,
-          range: [
-            [yylloc.first_line - 1, yylloc.first_column + i],
-            [yylloc.first_line - 1, yylloc.first_column + i + 1]
-          ],
-          text: `Unnecessary ${this.quote('.')} after macro name`
+          severity: 'warning',
+          location: {
+            file: this.filePath,
+            position: [
+              [yylloc.first_line - 1, yylloc.first_column + i],
+              [yylloc.first_line - 1, yylloc.first_column + i + 1]
+            ]
+          },
+          excerpt: `Unnecessary ${this.quote('.')} after macro name`
         });
       }
     } else {
@@ -373,17 +397,21 @@ endif "#end"(?:"if")?\b
   const macro = this.macrosByName[newMacro.name];
   if (macro) {
     const message = {
-      type: 'Warning',
-      filePath: this.filePath,
-      range: newMacro.range,
-      text: `${this.quote(newMacro.name)} macro redefined`
+      severity: 'warning',
+      location: {
+        file: this.filePath,
+        position: newMacro.range
+      },
+      excerpt: `${this.quote(newMacro.name)} macro redefined`
     };
     if (macro.range) {
       message.trace = [{
-        type: 'Trace',
-        filePath: this.filePath,
-        range: macro.range,
-        text: 'Previous definition is here'
+        severity: 'info',
+        location: {
+          file: this.filePath,
+          position: macro.range
+        },
+        excerpt: 'Previous definition is here'
       }];
     } else {
       message.text += `, was ${this.quote(macro.body)}`;
@@ -399,10 +427,12 @@ endif "#end"(?:"if")?\b
   const parameterNames = this.macro.parameterNames;
   if (parameterNames.indexOf(yytext) >= 0) {
     throw new CsoundPreprocessorError({
-      type: 'Error',
-      filePath: this.filePath,
-      range: this.rangeFromLocation(yylloc),
-      text: `Duplicate macro parameter name ${this.quote(yytext)}`
+      severity: 'error',
+      location: {
+        file: this.filePath,
+        position: this.rangeFromLocation(yylloc)
+      },
+      excerpt: `Duplicate macro parameter name ${this.quote(yytext)}`
     });
   }
   parameterNames.push(yytext);
@@ -419,19 +449,23 @@ endif "#end"(?:"if")?\b
 <macro_parameter_name_list,after_macro_parameter_name_separator>.
 %{
   throw new CsoundPreprocessorError({
-    type: 'Error',
-    filePath: this.filePath,
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
-    text: 'Expected macro parameter name'
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    },
+    excerpt: 'Expected macro parameter name'
   });
 %}
 <macro_parameter_name_list><<EOF>>
 %{
   this.messages.push({
-    type: 'Error',
-    filePath: this.filePath,
-    range: this.startRanges.pop(),
-    text: `Missing terminating ${this.quote(')')}`
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.startRanges.pop()
+    },
+    excerpt: `Missing terminating ${this.quote(')')}`
   });
 %}
 
@@ -439,10 +473,12 @@ endif "#end"(?:"if")?\b
 %{
   if (yytext !== "'") {
     this.messages.push({
-      type: 'Warning',
-      filePath: this.filePath,
-      range: this.rangeFromLocation(yylloc),
-      text: `${this.quote(yytext)} instead of single quote used to separate macro parameters`
+      severity: 'warning',
+      location: {
+        file: this.filePath,
+        position: this.rangeFromLocation(yylloc)
+      },
+      excerpt: `${this.quote(yytext)} instead of single quote used to separate macro parameters`
     });
   }
   this.popState()
@@ -458,10 +494,12 @@ endif "#end"(?:"if")?\b
 <after_macro_parameter_name>.
 %{
   throw new CsoundPreprocessorError({
-    type: 'Error',
-    filePath: this.filePath,
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
-    text: 'Expected single quote in macro parameter list'
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    },
+    excerpt: 'Expected single quote in macro parameter list'
   });
 %}
 
@@ -475,10 +513,12 @@ endif "#end"(?:"if")?\b
 <before_macro_body>[^#]|<<EOF>>
 %{
   const message = {
-    type: 'Error',
-    filePath: this.filePath,
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
-    text: `Expected ${this.quote('#')} after macro name`
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    },
+    excerpt: `Expected ${this.quote('#')} after macro name`
   };
   if (yytext.length > 0)
     throw new CsoundPreprocessorError(message);
@@ -496,10 +536,12 @@ endif "#end"(?:"if")?\b
 <macro_body><<EOF>>
 %{
   this.messages.push({
-    type: 'Error',
-    filePath: this.filePath,
-    range: this.startRanges.pop(),
-    text: `Missing terminating ${this.quote('#')}`
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.startRanges.pop()
+    },
+    excerpt: `Missing terminating ${this.quote('#')}`
   });
 %}
 
@@ -517,10 +559,12 @@ endif "#end"(?:"if")?\b
     delete this.macrosByName[yytext];
   } else {
     this.messages.push({
-      type: 'Error',
-      filePath: this.filePath,
-      range: this.rangeFromLocation(yylloc),
-      text: `${this.quote(yytext)} macro is not defined`
+      severity: 'error',
+      location: {
+        file: this.filePath,
+        position: this.rangeFromLocation(yylloc)
+      },
+      excerpt: `${this.quote(yytext)} macro is not defined`
     });
   }
 %}
@@ -542,10 +586,12 @@ endif "#end"(?:"if")?\b
 <else_true,else_false>{else}
 %{
   this.messages.push({
-    type: 'Error',
-    filePath: this.filePath,
-    range: this.rangeFromLocation(yylloc),
-    text: '#else after #else'
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.rangeFromLocation(yylloc)
+    },
+    excerpt: '#else after #else'
   });
 %}
 
@@ -557,30 +603,36 @@ endif "#end"(?:"if")?\b
 <ifdef_true,ifdef_false,else_true,else_false><<EOF>>
 %{
   this.messages.push({
-    type: 'Error',
-    filePath: this.filePath,
-    range: this.startRanges.pop(),
-    text: 'Unterminated conditional directive'
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.startRanges.pop()
+    },
+    excerpt: 'Unterminated conditional directive'
   });
 %}
 
 {endif}
 %{
   this.messages.push({
-    type: 'Error',
-    filePath: this.filePath,
-    range: this.rangeFromLocation(yylloc),
-    text: `${yytext} without #ifdef or #ifndef`
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.rangeFromLocation(yylloc)
+    },
+    excerpt: `${yytext} without #ifdef or #ifndef`
   });
 %}
 
 {else}
 %{
   this.messages.push({
-    type: 'Error',
-    filePath: this.filePath,
-    range: this.rangeFromLocation(yylloc),
-    text: '#else without #ifdef or #ifndef'
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.rangeFromLocation(yylloc)
+    },
+    excerpt: '#else without #ifdef or #ifndef'
   });
 %}
 
@@ -597,20 +649,24 @@ endif "#end"(?:"if")?\b
     const delimiter = yytext;
     if (delimiter !== '"') {
       this.messages.push({
-        type: 'Warning',
-        filePath: this.filePath,
-        range: includeRange,
-        text: `${this.quote(delimiter)} instead of ${this.quote('"')} used to enclose file path`
+        severity: 'warning',
+        location: {
+          file: this.filePath,
+          position: includeRange
+        },
+        excerpt: `${this.quote(delimiter)} instead of ${this.quote('"')} used to enclose file path`
       });
     }
     let includeFilePath = '';
     for (let character = this.input(); character !== delimiter; character = this.input()) {
       if (character === '\n' || character === '\r' || !character) {
         throw new CsoundPreprocessorError({
-          type: 'Error',
-          filePath: this.filePath,
-          range: includeRange,
-          text: `Missing terminating ${this.quote(delimiter)}`
+          severity: 'error',
+          location: {
+            file: this.filePath,
+            position: includeRange
+          },
+          excerpt: `Missing terminating ${this.quote(delimiter)}`
         });
       }
       includeFilePath += character;
@@ -639,10 +695,12 @@ endif "#end"(?:"if")?\b
         if (stats.isFile()) {
           if (this.includeDepth === this.maximumIncludeDepth) {
             throw new CsoundPreprocessorError({
-              type: 'Error',
-              filePath: this.filePath,
-              range: includeRange,
-              text: '#include nested too deeply'
+              severity: 'error',
+              location: {
+                file: this.filePath,
+                position: includeRange
+              },
+              excerpt: '#include nested too deeply'
             });
           }
           const preprocessor = this.makePreprocessor(fs.readFileSync(absolutePath, 'utf8'));
@@ -657,17 +715,21 @@ endif "#end"(?:"if")?\b
         }
       }
       throw new CsoundPreprocessorError({
-        type: 'Error',
-        filePath: this.filePath,
-        range: includeRange,
-        text: `${this.quote(includeFilePath)} file not found`
+        severity: 'error',
+        location: {
+          file: this.filePath,
+          position: includeRange
+        },
+        excerpt: `${this.quote(includeFilePath)} file not found`
       });
     } else {
       this.messages.push({
-        type: 'Warning',
-        filePath: this.filePath,
-        range: includeRange,
-        text: 'Empty file path'
+        severity: 'warning',
+        location: {
+          file: this.filePath,
+          position: includeRange
+        },
+        excerpt: 'Empty file path'
       });
     }
   }
@@ -675,10 +737,12 @@ endif "#end"(?:"if")?\b
 <include_directive>{newline}|<<EOF>>
 %{
   throw new CsoundPreprocessorError({
-    type: 'Error',
-    filePath: this.filePath,
-    range: this.startRanges.pop(),
-    text: 'File path missing'
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.startRanges.pop()
+    },
+    excerpt: 'File path missing'
   });
 %}
 
@@ -686,19 +750,23 @@ endif "#end"(?:"if")?\b
 <define_directive,undef_directive,ifdef_directive,ifndef_directive>[^\s]
 %{
   throw new CsoundPreprocessorError({
-    type: 'Error',
-    filePath: this.filePath,
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
-    text: 'Macro name must be an identifier'
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    },
+    excerpt: 'Macro name must be an identifier'
   });
 %}
 <define_directive,undef_directive,ifdef_directive,ifndef_directive><<EOF>>
 %{
   this.messages.push({
-    type: 'Error',
-    filePath: this.filePath,
-    range: this.startRanges.pop(),
-    text: 'Macro name missing'
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.startRanges.pop()
+    },
+    excerpt: 'Macro name missing'
   });
 %}
 
@@ -719,20 +787,24 @@ endif "#end"(?:"if")?\b
 <next_power_of_2,next_power_of_2_plus_1>[ \t]+
 %{
   this.messages.push({
-    type: 'Warning',
-    filePath: this.filePath,
-    range: this.rangeFromLocation(yylloc),
-    text: 'Unnecessary whitespace in next-power-of-2 expander'
+    severity: 'warning',
+    location: {
+      file: this.filePath,
+      position: this.rangeFromLocation(yylloc)
+    },
+    excerpt: 'Unnecessary whitespace in next-power-of-2 expander'
   });
 %}
 
 <next_power_of_2,next_power_of_2_plus_1>[^ \t\d]|<<EOF>>
 %{
   throw new CsoundPreprocessorError({
-    type: 'Error',
-    filePath: this.filePath,
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
-    text: 'Expected integer'
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    },
+    excerpt: 'Expected integer'
   });
 %}
 
@@ -758,10 +830,12 @@ endif "#end"(?:"if")?\b
 <score_loop_after_left_brace>.|{newline}
 %{
   throw new CsoundPreprocessorError({
-    type: 'Error',
-    filePath: this.filePath,
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
-    text: 'Expected integer greater than 0'
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    },
+    excerpt: 'Expected integer greater than 0'
   });
 %}
 
@@ -776,10 +850,12 @@ endif "#end"(?:"if")?\b
 <score_loop_after_repeat_count>.
 %{
   throw new CsoundPreprocessorError({
-    type: 'Error',
-    filePath: this.filePath,
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
-    text: 'Expected macro name'
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    },
+    excerpt: 'Expected macro name'
   });
 %}
 
@@ -788,10 +864,12 @@ endif "#end"(?:"if")?\b
 <score_loop_after_repitition_macro_name>.
 %{
   throw new CsoundPreprocessorError({
-    type: 'Error',
-    filePath: this.filePath,
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
-    text: 'Expected newline'
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    },
+    excerpt: 'Expected newline'
   });
 %}
 
@@ -823,10 +901,12 @@ endif "#end"(?:"if")?\b
 <score_loop,inner_score_loop><<EOF>>
 %{
   this.messages.push({
-    type: 'Error',
-    filePath: this.filePath,
-    range: this.startRanges.pop(),
-    text: `Missing terminating ${this.quote('}')}`
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.startRanges.pop()
+    },
+    excerpt: `Missing terminating ${this.quote('}')}`
   });
 %}
 
@@ -868,24 +948,30 @@ lexer.expandMacro = (function(YY_START) {
   const macro = this.macroUse.macro;
   if (macro.parameterNames && Object.keys(macrosByName).length < macro.parameterNames.length) {
     throw new CsoundPreprocessorError({
-      type: 'Error',
-      filePath: this.filePath,
-      range: lexer.rangeFromPosition(this.yylloc.first_line, this.yylloc.first_column),
-      text: 'Too few arguments provided to function-like macro',
+      severity: 'error',
+      location: {
+        file: this.filePath,
+        position: lexer.rangeFromPosition(this.yylloc.first_line, this.yylloc.first_column)
+      },
+      excerpt: 'Too few arguments provided to function-like macro',
       trace: [{
-        type: 'Trace',
-        filePath: this.filePath,
-        range: macro.range,
-        text: `Macro ${this.quote(macro.name)} defined here`
+        severity: 'info',
+        location: {
+          file: this.filePath,
+          position: macro.range
+        },
+        excerpt: `Macro ${this.quote(macro.name)} defined here`
       }]
     });
   }
   if (this.expansionDepth === this.maximumExpansionDepth) {
     throw new CsoundPreprocessorError({
-      type: 'Error',
-      filePath: this.filePath,
-      range: this.macroUse.range,
-      text: 'Macro expanded too deeply'
+      severity: 'error',
+      location: {
+        file: this.filePath,
+        position: this.macroUse.range
+      },
+      excerpt: 'Macro expanded too deeply'
     });
   }
   const preprocessor = this.makePreprocessor(macro.body);
@@ -896,7 +982,7 @@ lexer.expandMacro = (function(YY_START) {
     preprocessor.lex();
   } catch (error) {
     if (error.lintMessage)
-      error.lintMessage.range = this.macroUse.range;
+      error.lintMessage.location.position = this.macroUse.range;
     throw(error);
   }
   this.macroUse.childNodes = preprocessor.rootElement.childNodes;
@@ -904,10 +990,12 @@ lexer.expandMacro = (function(YY_START) {
   this.currentTextNode = null;
   if ('quoted_string' === YY_START) {
     this.messages.push({
-      type: 'Warning',
-      filePath: this.filePath,
-      range: this.rangeFromLocation(this.yylloc),
-      text: `${this.quote(macro.name)} macro expanded in string`
+      severity: 'warning',
+      location: {
+        file: this.filePath,
+        position: this.rangeFromLocation(this.yylloc)
+      },
+      excerpt: `${this.quote(macro.name)} macro expanded in string`
     });
   }
 }).bind(lexer);
@@ -916,10 +1004,12 @@ lexer.getMacro = (function(macroName) {
   const macro = this.macrosByName[macroName];
   if (!macro) {
     throw new CsoundPreprocessorError({
-      type: 'Error',
-      filePath: this.filePath,
-      range: this.rangeFromLocation(this.yylloc),
-      text: `${this.quote(macroName)} is not a macro or macro parameter`
+      severity: 'error',
+      location: {
+        file: this.filePath,
+        position: this.rangeFromLocation(this.yylloc)
+      },
+      excerpt: `${this.quote(macroName)} is not a macro or macro parameter`
     });
   }
   return macro;
@@ -1095,7 +1185,7 @@ class SourceMap {
 
 class CsoundPreprocessorError extends Error {
   constructor(lintMessage) {
-    super(lintMessage.text);
+    super(lintMessage.excerpt);
     this.name = 'CsoundPreprocessorError';
     this.lintMessage = lintMessage;
   }

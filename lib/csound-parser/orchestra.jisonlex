@@ -106,9 +106,11 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 "fi"
 %{
   this.messages.push({
-    type: 'Warning',
-    range: this.rangeFromLocation(yylloc),
-    text: `${this.quote(yytext)} instead of ${this.quote('endif')} used to end if statement`
+    severity: 'warning',
+    location: {
+      position: this.rangeFromLocation(yylloc)
+    },
+    excerpt: `${this.quote(yytext)} instead of ${this.quote('endif')} used to end if statement`
   });
   return 'ENDIF';
 %}
@@ -119,9 +121,11 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 "enduntil"
 %{
   this.messages.push({
-    type: 'Warning',
-    range: this.rangeFromLocation(yylloc),
-    text: `${this.quote(yytext)} instead of ${this.quote('od')} used to end loop`
+    severity: 'warning',
+    location: {
+      position: this.rangeFromLocation(yylloc)
+    },
+    excerpt: `${this.quote(yytext)} instead of ${this.quote('od')} used to end loop`
   });
   return 'OD';
 %}
@@ -136,16 +140,20 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
   const label = this.symbolTable.labels[labelName];
   if (label) {
     this.messages.push({
-      type: 'Warning',
-      range: this.sourceMap.sourceRange([
-        [yylloc.first_line - 1, yylloc.first_column],
-        [yylloc.first_line - 1, yylloc.first_column + labelName.length]
-      ]),
-      text: `Duplicate label ${this.quote(labelName)} ignored`,
+      severity: 'warning',
+      location: {
+        position: this.sourceMap.sourceRange([
+          [yylloc.first_line - 1, yylloc.first_column],
+          [yylloc.first_line - 1, yylloc.first_column + labelName.length]
+        ])
+      },
+      excerpt: `Duplicate label ${this.quote(labelName)} ignored`,
       trace: [{
-        type: 'Trace',
-        range: label.range,
-        text: `Label ${this.quote(labelName)} is here`
+        severity: 'info',
+        location: {
+          position: label.range
+        },
+        excerpt: `Label ${this.quote(labelName)} is here`
       }]
     });
   } else {
@@ -185,9 +193,11 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 <after_instr_keyword>.
 %{
   throw new CsoundLexerError({
-    type: 'Error',
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
-    text: 'Expected instrument number or identifier'
+    severity: 'error',
+    location: {
+      position: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    },
+    excerpt: 'Expected instrument number or identifier'
   });
 %}
 
@@ -206,9 +216,11 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 <after_instrument_number_or_identifier>[^,\n]
 %{
   throw new CsoundLexerError({
-    type: 'Error',
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
-    text: 'Expected newline after instrument numbers and identifiers'
+    severity: 'error',
+    location: {
+      position: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    },
+    excerpt: 'Expected newline after instrument numbers and identifiers'
   });
 %}
 
@@ -221,9 +233,11 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 <after_instrument_plus_sign>.
 %{
   throw new CsoundLexerError({
-    type: 'Error',
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
-    text: 'Expected instrument identifier'
+    severity: 'error',
+    location: {
+      position: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    },
+    excerpt: 'Expected instrument identifier'
   });
 %}
 
@@ -244,9 +258,11 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 <after_opcode_keyword>.
 %{
   throw new CsoundLexerError({
-    type: 'Error',
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
-    text: 'Expected opcode name'
+    severity: 'error',
+    location: {
+      position: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    },
+    excerpt: 'Expected opcode name'
   });
 %}
 
@@ -260,9 +276,11 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 <after_opcode_name>[^,]
 %{
   throw new CsoundLexerError({
-    type: 'Error',
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
-    text: 'Expected comma after opcode name'
+    severity: 'error',
+    location: {
+      position: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    },
+    excerpt: 'Expected comma after opcode name'
   });
 %}
 
@@ -277,9 +295,11 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 <before_opcode_output_type_signature>.
 %{
   throw new CsoundLexerError({
-    type: 'Error',
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
-    text: 'Expected output type signature'
+    severity: 'error',
+    location: {
+      position: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    },
+    excerpt: 'Expected output type signature'
   });
 %}
 
@@ -293,9 +313,11 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 <after_opcode_output_type_signature>[^,]
 %{
   throw new CsoundLexerError({
-    type: 'Error',
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
-    text: 'Expected comma after output type signature'
+    severity: 'error',
+    location: {
+      position: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    },
+    excerpt: 'Expected comma after output type signature'
   });
 %}
 
@@ -309,9 +331,11 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 <before_opcode_input_type_signature>.
 %{
   throw new CsoundLexerError({
-    type: 'Error',
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
-    text: 'Expected input type signature'
+    severity: 'error',
+    location: {
+      position: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    },
+    excerpt: 'Expected input type signature'
   });
 %}
 
@@ -350,9 +374,11 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 <opcode_output_type_annotation>[^ak]
 %{
   throw new CsoundLexerError({
-    type: 'Error',
-    range: this.rangeFromPosition(yylloc.first_line, yylloc.first_column),
-    text: `Expected output type (${this.quote('a')} or ${this.quote('k')})`
+    severity: 'error',
+    location: {
+      position: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    },
+    excerpt: `Expected output type (${this.quote('a')} or ${this.quote('k')})`
   });
 %}
 
@@ -361,9 +387,11 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 .
 %{
   this.messages.push({
-    type: 'Error',
-    range: this.rangeFromLocation(yylloc),
-    text: `Unexpected character ${this.quote(yytext)}`
+    severity: 'error',
+    location: {
+      position: this.rangeFromLocation(yylloc)
+    },
+    excerpt: `Unexpected character ${this.quote(yytext)}`
   });
 %}
 

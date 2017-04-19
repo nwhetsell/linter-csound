@@ -45,9 +45,11 @@ primary_expression
   | error
     {
       parser.addError({
-        type: 'Error',
-        range: parser.lexer.rangeFromPosition(@$.first_line, @$.first_column),
-        text: 'Expected expression'
+        severity: 'error',
+        location: {
+          position: parser.lexer.rangeFromPosition(@$.first_line, @$.first_column)
+        },
+        excerpt: 'Expected expression'
       });
     }
   ;
@@ -319,9 +321,11 @@ goto_statement
   | GOTO error NEWLINE
     {
       parser.addError({
-        type: 'Error',
-        range: parser.lexer.rangeFromPosition(@1.last_line, @1.last_column),
-        text: 'Expected newline'
+        severity: 'error',
+        location: {
+          position: parser.lexer.rangeFromPosition(@1.last_line, @1.last_column)
+        },
+        excerpt: 'Expected newline'
       });
     }
   ;
@@ -338,9 +342,11 @@ then_statement
   | THEN error NEWLINE
     {
       parser.addError({
-        type: 'Error',
-        range: parser.lexer.rangeFromPosition(@1.last_line, @1.last_column),
-        text: 'Expected newline'
+        severity: 'error',
+        location: {
+          position: parser.lexer.rangeFromPosition(@1.last_line, @1.last_column)
+        },
+        excerpt: 'Expected newline'
       });
     }
   ;
@@ -428,9 +434,11 @@ statement
   | error
     {
       parser.addError({
-        type: 'Error',
-        range: parser.lexer.rangeFromPosition(@1.first_line, @1.first_column),
-        text: 'Invalid statement'
+        severity: 'error',
+        location: {
+          position: parser.lexer.rangeFromPosition(@1.first_line, @1.first_column)
+        },
+        excerpt: 'Invalid statement'
       });
     }
   ;
@@ -725,9 +733,11 @@ parser.addError = (function(error) {
   this.messages.push(error);
   if (this.messages.length === 10) {
     this.parseError('', {}, {
-      type: 'Error',
-      range: error.range,
-      text: 'Too many errors emitted, stopping now'
+      severity: 'error',
+      location: {
+        position: error.range
+      },
+      excerpt: 'Too many errors emitted, stopping now'
     });
   }
 }).bind(parser);
