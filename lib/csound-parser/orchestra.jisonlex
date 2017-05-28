@@ -430,7 +430,7 @@ lexer.setInput = (function(input, yy) {
   return original_setInput.apply(this, arguments);
 }).bind(lexer);
 
-lexer.skipWhitespaceAndNewline = (function(yylloc) {
+lexer.skipWhitespaceAndNewline = (function() {
   for (let character = this.input(); character !== null; character = this.input()) {
     // This needs to be kept synchronized with the whitespace patterns.
     if (character !== ' ' && character !== '\t') {
