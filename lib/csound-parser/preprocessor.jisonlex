@@ -916,6 +916,7 @@ endif "#end"(?:"if")?\b
 
 %%
 
+const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
@@ -1037,6 +1038,7 @@ lexer.makePreprocessor = (function(input) {
   // current preprocessor in the Node.js module cache.
   delete require.cache[__filename];
   const preprocessor = require(__filename);
+  assert.notStrictEqual(preprocessor, this);
   preprocessor.setInput(input);
   Object.assign(preprocessor.macrosByName, this.macrosByName);
   preprocessor.isScorePreprocessor = this.isScorePreprocessor;

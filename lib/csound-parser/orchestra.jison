@@ -732,7 +732,7 @@ Object.assign(parser, {
 parser.addError = (function(error) {
   this.messages.push(error);
   if (this.messages.length === 10) {
-    this.parseError('', {}, {
+    this.parseError('', {}, this.JisonParserError, {
       severity: 'error',
       location: {
         position: error.range
@@ -753,9 +753,9 @@ class CsoundParserError extends Error {
 }
 
 const original_originalParseError = parser.originalParseError;
-parser.originalParseError = (function(str, hash, lintMessage) {
-  if (arguments.length >= 3)
-    throw new CsoundParserError(lintMessage);
+parser.originalParseError = (function() {
+  if (arguments.length > 3)
+    throw new CsoundParserError(arguments[3]);
   original_originalParseError.apply(this, arguments);
 }).bind(parser);
 
