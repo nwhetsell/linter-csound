@@ -758,5 +758,3 @@ parser.originalParseError = (function() {
     throw new CsoundParserError(arguments[3]);
   original_originalParseError.apply(this, arguments);
 }).bind(parser);
-
-module.exports = parser;

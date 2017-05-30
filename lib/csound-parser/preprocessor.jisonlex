@@ -919,6 +919,7 @@ endif "#end"(?:"if")?\b
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 lexer.addNewline = (function() {
   this.appendToCurrentTextNode('\n');
@@ -1033,15 +1034,13 @@ lexer.lex = (function() {
 }).bind(lexer);
 
 lexer.makePreprocessor = (function(input) {
-  // A function like yy_scan_string is unavailable in Jison Lex. Instead, this
-  // function creates a new preprocessor, taking care to avoid getting the
-  // current preprocessor in the Node.js module cache.
-  delete require.cache[__filename];
-  const preprocessor = require(__filename);
+  // A function like yy_scan_string is unavailable in Jison Lex.
+  const preprocessor = vm.runInThisContext(this.code)(require);
   assert.notStrictEqual(preprocessor, this);
   preprocessor.setInput(input);
   Object.assign(preprocessor.macrosByName, this.macrosByName);
   preprocessor.isScorePreprocessor = this.isScorePreprocessor;
+  preprocessor.code = this.code;
   return preprocessor;
 }).bind(lexer);
 
@@ -1192,5 +1191,3 @@ class CsoundPreprocessorError extends Error {
     this.lintMessage = lintMessage;
   }
 }
-
-module.exports = lexer

@@ -425,8 +425,7 @@ lexer.setInput = (function(input, yy) {
     sourceLocation: location => location,
     sourceRange: range => range
   };
-  const SymbolTable = require(require('path').join(__dirname, 'symbol-table.js'));
-  this.symbolTable = new SymbolTable();
+  this.symbolTable = new this.SymbolTable();
   return original_setInput.apply(this, arguments);
 }).bind(lexer);
 

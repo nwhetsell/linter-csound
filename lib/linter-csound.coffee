@@ -1,14 +1,21 @@
 csound = require 'csound-api'
+fs = require 'fs'
 path = require 'path'
-preprocessor = require path.join __dirname, 'csound-parser', 'preprocessor.js'
 {Range} = require 'atom'
 SymbolTable = require path.join __dirname, 'csound-parser', 'symbol-table.js'
+vm = require 'vm'
 
 orchestraParserPath = path.join __dirname, 'csound-parser', 'orchestra-parser.js'
 
 module.exports =
 LinterCsound =
   provideLinter: ->
+    preprocessorFilename = 'preprocessor.js'
+    preprocessorCode = fs.readFileSync(path.join(__dirname, 'csound-parser', preprocessorFilename), 'utf-8')
+
+    parserFilename = 'orchestra-parser.js'
+    parserCode = fs.readFileSync(path.join(__dirname, 'csound-parser', parserFilename), 'utf-8')
+
     return {
       name: 'Csound'
       grammarScopes: ['source.csound']
@@ -18,6 +25,8 @@ LinterCsound =
       lint: (editor) ->
         return new Promise (resolve, reject) ->
           # Preprocess the orchestra.
+          preprocessor = vm.runInThisContext(preprocessorCode, {filename: preprocessorFilename})(require)
+          preprocessor.code = preprocessorCode
           preprocessor.filePath = editor.getPath()
           preprocessor.setInput editor.getText()
           try
@@ -29,8 +38,8 @@ LinterCsound =
               throw error
 
           # Parse the orchestra.
-          delete require.cache[orchestraParserPath]
-          parser = require orchestraParserPath
+          parser = vm.runInThisContext(parserCode, {filename: parserFilename})(require)
+          parser.lexer.SymbolTable = SymbolTable
           parser.yy.pre_parse = () ->
             parser.lexer.sourceMap = preprocessor.sourceMap
             Object.assign parser.lexer.symbolTable.identifiers, SymbolTable.builtInOpcodeSymbolTable.identifiers
