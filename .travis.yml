@@ -1,0 +1,25 @@
+language: node_js
+
+node_js:
+  - node
+  - "6"
+
+dist: trusty
+
+install:
+  - sudo apt-get install -y libboost-dev libsndfile1-dev
+  - wget https://github.com/csound/csound/archive/6.09.0.tar.gz
+  - tar -xzf 6.09.0.tar.gz
+  - mkdir csound
+  - cd csound
+  - cmake ../csound-6.09.0
+  - make
+  - sudo make install
+  - sudo ldconfig
+  - cd ..
+  - npm install csound-api
+
+script:
+  - cd lib/csound-parser
+  - npm --global install jasmine
+  - jasmine

@@ -1,0 +1,24 @@
+# https://www.appveyor.com/docs/appveyor-yml
+
+environment:
+  matrix:
+    - nodejs_version: "Stable"
+    - nodejs_version: "LTS"
+
+install:
+  # Install Node.js.
+  - ps: Install-Product node $env:nodejs_version x64
+  # Install Csound; see https://www.appveyor.com/docs/how-to/download-file.
+  - ps: Start-FileDownload 'https://github.com/csound/csound/releases/download/6.09.0/Setup_Csound6_x64_6.09.0.exe'
+  - ps: Start-Process 'Setup_Csound6_x64_6.09.0.exe' -ArgumentList '/verySilent', '/noRestart' -Wait
+  - set PATH=%PATH%;%ProgramFiles%\Csound6_x64\bin
+  # Install csound-api.
+  - set CL=/I"C:\Libraries\boost_1_63_0"
+  - npm install csound-api
+
+test_script:
+  - cd lib\csound-parser
+  - npm --global install jasmine
+  - jasmine
+
+build: off
