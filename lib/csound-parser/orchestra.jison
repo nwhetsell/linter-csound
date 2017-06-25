@@ -653,6 +653,43 @@ class Empty extends ASTNode {}
 
 class InstrumentNumberAndNameList extends ASTNode {}
 class Instrument extends ASTNode {
+  constructor(rangeOrLocation, properties) {
+    super(rangeOrLocation, properties);
+    for (const child of this.numberAndNameList.children) {
+      const name = (child instanceof UnaryOperation) ? child.children[1] : child;
+      const nameString = name.string;
+      if (nameString === '0') {
+        parser.addError({
+          severity: 'error',
+          location: {
+            position: name.range
+          },
+          excerpt: 'Instrument numbers must be greater than 0'
+        });
+        return;
+      }
+      const previousName = parser.instrumentNamesByString[nameString];
+      if (previousName) {
+        parser.addError({
+          severity: 'error',
+          location: {
+            position: name.range
+          },
+          excerpt: `Instrument ${nameString} redefined`,
+          trace: [{
+            severity: 'info',
+            location: {
+              position: previousName.range
+            },
+            excerpt: 'Previous definition is here'
+          }]
+        });
+        return;
+      }
+      parser.instrumentNamesByString[nameString] = name;
+    }
+  }
+
   get numberAndNameList() { return this.children[0]; }
 }
 
@@ -667,6 +704,8 @@ class Opcode extends ASTNode {
 class Orchestra extends ASTNode {}
 
 Object.assign(parser, {
+  instrumentNamesByString: {},
+
   Identifier: Identifier,
   NumberLiteral: NumberLiteral,
   StringLiteral: StringLiteral,
