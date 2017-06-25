@@ -484,8 +484,7 @@ instrument_number_and_name_list
 instrument
   : INSTR instrument_number_and_name_list NEWLINE statements ENDIN NEWLINE
     {
-      $statements.splice(0, 0, $instrument_number_and_name_list);
-      $$ = new Instrument(@$, {children: $statements});
+      $$ = new Instrument(@$, {children: [$instrument_number_and_name_list, ...$statements]});
     }
   | INSTR instrument_number_and_name_list NEWLINE ENDIN NEWLINE
     {
@@ -510,8 +509,7 @@ opcode_input_type_signature
 opcode_definition
   : OPCODE identifier ',' opcode_output_type_signature ',' opcode_input_type_signature NEWLINE statements ENDOP NEWLINE
     {
-      $statements.splice(0, 0, $identifier, $opcode_output_type_signature, $opcode_input_type_signature);
-      $$ = new Opcode(@$, {children: $statements});
+      $$ = new Opcode(@$, {children: [$identifier, $opcode_output_type_signature, $opcode_input_type_signature, ...$statements]});
     }
   | OPCODE identifier ',' opcode_output_type_signature ',' opcode_input_type_signature NEWLINE ENDOP NEWLINE
     {
