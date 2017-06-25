@@ -4,21 +4,21 @@
 
 identifier
   : IDENTIFIER
-    { $$ = new Identifier(@$, {string: $1}); };
+    { $$ = new Identifier(@$, {string: $IDENTIFIER}); };
 global_value_identifier
   : GLOBAL_VALUE_IDENTIFIER
-    { $$ = new Identifier(@$, {string: $1}); };
+    { $$ = new Identifier(@$, {string: $GLOBAL_VALUE_IDENTIFIER}); };
 opcode
   : OPCODE
-    { $$ = new Identifier(@$, {string: $1}); };
+    { $$ = new Identifier(@$, {string: $OPCODE}); };
 void_opcode
   : VOID_OPCODE
-    { $$ = new Identifier(@$, {string: $1}); };
+    { $$ = new Identifier(@$, {string: $VOID_OPCODE}); };
 
 decimal_integer
   : DECIMAL_INTEGER
     {
-      $$ = new NumberLiteral(@$, {string: $1});
+      $$ = new NumberLiteral(@$, {string: $DECIMAL_INTEGER});
     }
   ;
 
@@ -26,11 +26,11 @@ constant
   : decimal_integer
   | NUMBER
     {
-      $$ = new NumberLiteral(@$, {string: $1});
+      $$ = new NumberLiteral(@$, {string: $NUMBER});
     }
   | STRING
     {
-      $$ = new StringLiteral(@$, {string: $1});
+      $$ = new StringLiteral(@$, {string: $STRING});
     }
   ;
 
@@ -40,7 +40,7 @@ primary_expression
   | constant
   | '(' conditional_expression ')'
     {
-      $$ = $2;
+      $$ = $conditional_expression;
     }
   | error
     {
@@ -58,20 +58,20 @@ postfix_expression
   : primary_expression
   | postfix_expression '[' conditional_expression ']'
     {
-      $$ = new ArrayMember(@$, {children: [$1, $3]});
+      $$ = new ArrayMember(@$, {children: [$postfix_expression, $conditional_expression]});
     }
   | opcode '(' opcode_inputs ')'
     {
       $$ = new OpcodeExpression(@$, {children: [
-        $1,
-        new ArgumentList(@3, {children: $3})
+        $opcode,
+        new ArgumentList(@opcode_inputs, {children: $opcode_inputs})
       ]});
     }
   | opcode OPCODE_OUTPUT_TYPE_ANNOTATION '(' opcode_inputs ')'
     {
-      $$ = new OpcodeExpression(@$, {outputTypeAnnotation: $2, children: [
-        $1,
-        new ArgumentList(@4, {children: $4})],
+      $$ = new OpcodeExpression(@$, {outputTypeAnnotation: $OPCODE_OUTPUT_TYPE_ANNOTATION, children: [
+        $opcode,
+        new ArgumentList(@opcode_inputs, {children: $opcode_inputs})],
       });
     }
   ;
@@ -87,7 +87,7 @@ unary_expression
   : postfix_expression
   | unary_operator unary_expression
     {
-      $$ = new UnaryOperation(@$, {children: [$1, $2]});
+      $$ = new UnaryOperation(@$, {children: [$unary_operator, $unary_expression]});
     }
   ;
 
@@ -102,7 +102,7 @@ multiplicative_expression
   : unary_expression
   | multiplicative_expression multiplicative_operator unary_expression
     {
-      $$ = new BinaryOperation(@$, {children: [$1, $2, $3]});
+      $$ = new BinaryOperation(@$, {children: [$multiplicative_expression, $multiplicative_operator, $unary_expression]});
     }
   ;
 
@@ -115,7 +115,7 @@ additive_expression
   : multiplicative_expression
   | additive_expression additive_operator multiplicative_expression
     {
-      $$ = new BinaryOperation(@$, {children: [$1, $2, $3]});
+      $$ = new BinaryOperation(@$, {children: [$additive_expression, $additive_operator, $multiplicative_expression]});
     }
   ;
 
@@ -128,7 +128,7 @@ shift_expression
   : additive_expression
   | shift_expression shift_operator additive_expression
     {
-      $$ = new BinaryOperation(@$, {children: [$1, $2, $3]});
+      $$ = new BinaryOperation(@$, {children: [$shift_expression, $shift_operator, $additive_expression]});
     }
   ;
 
@@ -143,7 +143,7 @@ relational_expression
   : shift_expression
   | relational_expression relational_operator shift_expression
     {
-      $$ = new BinaryOperation(@$, {children: [$1, $2, $3]});
+      $$ = new BinaryOperation(@$, {children: [$relational_expression, $relational_operator, $shift_expression]});
     }
   ;
 
@@ -156,66 +156,66 @@ equality_expression
   : relational_expression
   | equality_expression equality_operator relational_expression
     {
-      $$ = new BinaryOperation(@$, {children: [$1, $2, $3]});
+      $$ = new BinaryOperation(@$, {children: [$equality_expression, $equality_operator, $relational_expression]});
     }
   ;
 
 and_expression
   : equality_expression
-  | and_expression '&' equality_expression
+  | and_expression '&'[AND] equality_expression
     {
-      $$ = new BinaryOperation(@$, {children: [$1, new BitwiseAND(@2), $3]});
+      $$ = new BinaryOperation(@$, {children: [$and_expression, new BitwiseAND(@AND), $equality_expression]});
     }
   ;
 
 exclusive_or_expression
   : and_expression
-  | exclusive_or_expression '#' and_expression
+  | exclusive_or_expression '#'[XOR] and_expression
     {
-      $$ = new BinaryOperation(@$, {children: [$1, new BitwiseXOR(@2), $3]});
+      $$ = new BinaryOperation(@$, {children: [$exclusive_or_expression, new BitwiseXOR(@XOR), $and_expression]});
     }
   ;
 
 inclusive_or_expression
   : exclusive_or_expression
-  | inclusive_or_expression '|' exclusive_or_expression
+  | inclusive_or_expression '|'[OR] exclusive_or_expression
     {
-      $$ = new BinaryOperation(@$, {children: [$1, new BitwiseOR(@2), $3]});
+      $$ = new BinaryOperation(@$, {children: [$inclusive_or_expression, new BitwiseOR(@OR), $exclusive_or_expression]});
     }
   ;
 
 logical_and_expression
   : inclusive_or_expression
-  | logical_and_expression '&&' inclusive_or_expression
+  | logical_and_expression '&&'[and] inclusive_or_expression
     {
-      $$ = new BinaryOperation(@$, {children: [$1, new And(@2), $3]});
+      $$ = new BinaryOperation(@$, {children: [$logical_and_expression, new And(@and), $inclusive_or_expression]});
     }
   ;
 
 logical_or_expression
   : logical_and_expression
-  | logical_or_expression '||' logical_and_expression
+  | logical_or_expression '||'[or] logical_and_expression
     {
-      $$ = new BinaryOperation(@$, {children: [$1, new Or(@2), $3]});
+      $$ = new BinaryOperation(@$, {children: [$logical_or_expression, new Or(@or), $logical_and_expression]});
     }
   ;
 
 conditional_expression
   : logical_or_expression
-  | logical_or_expression '?' conditional_expression ':' conditional_expression
+  | logical_or_expression '?' conditional_expression[if] ':' conditional_expression[else]
     {
-      $$ = new ConditionalExpression(@$, {children: [$1, $2, $3]});
+      $$ = new ConditionalExpression(@$, {children: [$logical_or_expression, $if, $else]});
     }
   ;
 
 labeled_statement
   : LABEL statement
     {
-      $$ = new LabeledStatement(@$, {children: [$1, $2]});
+      $$ = new LabeledStatement(@$, {children: [$LABEL, $statement]});
     }
   | LABEL EOF
     {
-      $$ = new LabeledStatement(@$, {children: [$1]});
+      $$ = new LabeledStatement(@$, {children: [$LABEL]});
     }
   ;
 
@@ -230,46 +230,46 @@ declarator
   : identifier
   | declarator '[' ']'
     {
-      $$ = new ArrayDeclarator(@$, {children: [$1]});
+      $$ = new ArrayDeclarator(@$, {children: [$declarator]});
     }
   | declarator '[' conditional_expression ']'
     {
-      $$ = new ArrayMember(@$, {children: [$1, $3]});
+      $$ = new ArrayMember(@$, {children: [$declarator, $conditional_expression]});
     }
   ;
 
 opcode_outputs
   : declarator
     {
-      $$ = [$1];
+      $$ = [$declarator];
     }
   | opcode_outputs ',' declarator
     {
-      $$.push($2);
+      $$.push($declarator);
     }
   ;
 
 opcode_inputs
   : conditional_expression
     {
-      $$ = [$1];
+      $$ = [$conditional_expression];
     }
   | opcode_inputs ',' conditional_expression
     {
-      $$.push($3);
+      $$.push($conditional_expression);
     }
   ;
 
 opcode_expression
   : opcode
     {
-      $$ = new OpcodeExpression(@$, {children: [$1]});
+      $$ = new OpcodeExpression(@$, {children: [$opcode]});
     }
   | opcode opcode_inputs
     {
       $$ = new OpcodeExpression(@$, {children: [
-        $1,
-        new ArgumentList(@2, {children: $2})
+        $opcode,
+        new ArgumentList(@opcode_inputs, {children: $opcode_inputs})
       ]});
     }
   ;
@@ -277,17 +277,17 @@ opcode_expression
 assignment_statement
   : declarator '=' conditional_expression NEWLINE
     {
-      $$ = new Assignment(@$, {children: [$1, $3]});
+      $$ = new Assignment(@$, {children: [$declarator, $conditional_expression]});
     }
   | identifier compound_assignment_operator conditional_expression NEWLINE
     {
-      $$ = new CompoundAssignment(@$, {children: [$1, $2, $3]});
+      $$ = new CompoundAssignment(@$, {children: [$identifier, $compound_assignment_operator, $conditional_expression]});
     }
   | opcode_outputs opcode_expression NEWLINE
     {
       $$ = new OpcodeStatement(@$, {children: [
-        new ArgumentList(@1, {children: $1}),
-        $2
+        new ArgumentList(@opcode_outputs, {children: $opcode_outputs}),
+        $opcode_expression
       ]});
     }
   ;
@@ -297,13 +297,13 @@ void_opcode_statement
     {
       $$ = new VoidOpcodeStatement(@$, {children: [
         new OpcodeExpression({
-          first_line: @1.first_line,
-          first_column: @1.first_column,
-          last_line: @2.last_line,
-          last_column: @2.last_column
+          first_line: @void_opcode.first_line,
+          first_column: @void_opcode.first_column,
+          last_line: @opcode_inputs.last_line,
+          last_column: @opcode_inputs.last_column
         }, {children: [
-          $1,
-          new ArgumentList(@2, {children: $2})
+          $void_opcode,
+          new ArgumentList(@opcode_inputs, {children: $opcode_inputs})
         ]})
       ]});
     }
@@ -312,18 +312,18 @@ void_opcode_statement
 goto_statement
   : GOTO identifier NEWLINE
     {
-      $$ = new Goto(@$, {children: [$2]});
+      $$ = new Goto(@$, {children: [$identifier]});
     }
   | GOTO decimal_integer NEWLINE
     {
-      $$ = new Goto(@$, {children: [$2]});
+      $$ = new Goto(@$, {children: [$decimal_integer]});
     }
   | GOTO error NEWLINE
     {
       parser.addError({
         severity: 'error',
         location: {
-          position: parser.lexer.rangeFromPosition(@1.last_line, @1.last_column)
+          position: parser.lexer.rangeFromPosition(@GOTO.last_line, @GOTO.last_column)
         },
         excerpt: 'Expected newline'
       });
@@ -333,7 +333,7 @@ goto_statement
 then_statement
   : THEN NEWLINE statements
     {
-      $$ = new Then(@$, {children: $3});
+      $$ = new Then(@$, {children: $statements});
     }
   | THEN NEWLINE
     {
@@ -344,7 +344,7 @@ then_statement
       parser.addError({
         severity: 'error',
         location: {
-          position: parser.lexer.rangeFromPosition(@1.last_line, @1.last_column)
+          position: parser.lexer.rangeFromPosition(@THEN.last_line, @THEN.last_column)
         },
         excerpt: 'Expected newline'
       });
@@ -354,7 +354,7 @@ then_statement
 elseif_statement
   : ELSEIF equality_expression then_statement
     {
-      $$ = new If(@$, {children: [$2, $3]});
+      $$ = new If(@$, {children: [$equality_expression, $then_statement]});
     }
   ;
 
@@ -362,7 +362,7 @@ elseif_statement
 else
   : ELSE statements
     {
-      $$ = new Else(@$, {children: $2});
+      $$ = new Else(@$, {children: $statements});
     }
   ;
 
@@ -370,30 +370,30 @@ elseif
   : elseif_statement
   | elseif elseif_statement
     {
-      $$.children.push(new Else(@2, {children: [$2]}));
+      $$.children.push(new Else(@elseif_statement, {children: [$elseif_statement]}));
     }
   | elseif else
     {
-      $$.children.push($2);
+      $$.children.push($else);
     }
   ;
 
 if_statement
   : IF equality_expression goto_statement
     {
-      $$ = new If(@$, {children: [$2, $3]});
+      $$ = new If(@$, {children: [$equality_expression, $goto_statement]});
     }
   | IF equality_expression then_statement ENDIF NEWLINE
     {
-      $$ = new If(@$, {children: [$2, $3]});
+      $$ = new If(@$, {children: [$equality_expression, $then_statement]});
     }
   | IF equality_expression then_statement else ENDIF NEWLINE
     {
-      $$ = new If(@$, {children: [$2, $3, $4]});
+      $$ = new If(@$, {children: [$equality_expression, $then_statement, $else]});
     }
   | IF equality_expression then_statement elseif ENDIF NEWLINE
     {
-      $$ = new If(@$, {children: [$2, $3, new Else(@4, {children: [$4]})]});
+      $$ = new If(@$, {children: [$equality_expression, $then_statement, new Else(@elseif, {children: [$elseif]})]});
     }
   ;
 
@@ -405,18 +405,18 @@ do
     }
   | DO statements
     {
-      $$ = new Do(@$, {children: $2});
+      $$ = new Do(@$, {children: $statements});
     }
   ;
 
 loop_statement
   : WHILE equality_expression do OD
     {
-      $$ = new While(@$, {children: [$2, $3]});
+      $$ = new While(@$, {children: [$equality_expression, $do]});
     }
   | UNTIL equality_expression do OD
     {
-      $$ = new Until(@$, {children: [$2, $3]});
+      $$ = new Until(@$, {children: [$equality_expression, $do]});
     }
   ;
 
@@ -436,7 +436,7 @@ statement
       parser.addError({
         severity: 'error',
         location: {
-          position: parser.lexer.rangeFromPosition(@1.first_line, @1.first_column)
+          position: parser.lexer.rangeFromPosition(@$.first_line, @$.first_column)
         },
         excerpt: 'Invalid statement'
       });
@@ -446,83 +446,83 @@ statement
 statements
   : statement
     {
-      $$ = [$1];
+      $$ = [$statement];
     }
   | statements statement
     {
-      $$.push($2);
+      $$.push($statement);
     }
   ;
 
 instrument_number_or_name
   : decimal_integer
   | identifier
-  | '+' identifier
+  | '+'[plus] identifier
     {
-      $$ = new UnaryOperation(@$, {children: [new UnaryPlus(@1), $2]});
+      $$ = new UnaryOperation(@$, {children: [new UnaryPlus(@plus), $identifier]});
     }
   ;
 
 instrument_numbers_and_names
   : instrument_number_or_name
     {
-      $$ = [$1];
+      $$ = [$instrument_number_or_name];
     }
   | instrument_numbers_and_names ',' instrument_number_or_name
     {
-      $$.push($3);
+      $$.push($instrument_number_or_name);
     }
   ;
 
 instrument_number_and_name_list
   : instrument_numbers_and_names
     {
-      $$ = new InstrumentNumberAndNameList(@$, {children: $1});
+      $$ = new InstrumentNumberAndNameList(@$, {children: $instrument_numbers_and_names});
     }
   ;
 
 instrument
   : INSTR instrument_number_and_name_list NEWLINE statements ENDIN NEWLINE
     {
-      $4.splice(0, 0, $2);
-      $$ = new Instrument(@$, {children: $4});
+      $statements.splice(0, 0, $instrument_number_and_name_list);
+      $$ = new Instrument(@$, {children: $statements});
     }
   | INSTR instrument_number_and_name_list NEWLINE ENDIN NEWLINE
     {
-      $$ = new Instrument(@$, {children: [$2]});
+      $$ = new Instrument(@$, {children: [$instrument_number_and_name_list]});
     }
   ;
 
 opcode_output_type_signature
   : OPCODE_OUTPUT_TYPE_SIGNATURE
     {
-      $$ = new OpcodeOutputTypeSignature(@$, {string: $1});
+      $$ = new OpcodeOutputTypeSignature(@$, {string: $OPCODE_OUTPUT_TYPE_SIGNATURE});
     }
   ;
 
 opcode_input_type_signature
   : OPCODE_INPUT_TYPE_SIGNATURE
     {
-      $$ = new OpcodeInputTypeSignature(@$, {string: $1});
+      $$ = new OpcodeInputTypeSignature(@$, {string: $OPCODE_INPUT_TYPE_SIGNATURE});
     }
   ;
 
 opcode_definition
   : OPCODE identifier ',' opcode_output_type_signature ',' opcode_input_type_signature NEWLINE statements ENDOP NEWLINE
     {
-      $8.splice(0, 0, $2, $4, $6);
-      $$ = new Opcode(@$, {children: $8});
+      $statements.splice(0, 0, $identifier, $opcode_output_type_signature, $opcode_input_type_signature);
+      $$ = new Opcode(@$, {children: $statements});
     }
   | OPCODE identifier ',' opcode_output_type_signature ',' opcode_input_type_signature NEWLINE ENDOP NEWLINE
     {
-      $$ = new Opcode(@$, {children: [$2, $4, $6]});
+      $$ = new Opcode(@$, {children: [$identifier, $opcode_output_type_signature, $opcode_input_type_signature]});
     }
   ;
 
 orchestra_statement
   : global_value_identifier '=' decimal_integer NEWLINE
     {
-      $$ = new Assignment(@$, {children: [$1, $3]});
+      $$ = new Assignment(@$, {children: [$global_value_identifier, $decimal_integer]});
     }
   | statement
   | instrument
@@ -532,18 +532,18 @@ orchestra_statement
 orchestra_statements
   : orchestra_statement
     {
-      $$ = [$1];
+      $$ = [$orchestra_statement];
     }
   | orchestra_statements orchestra_statement
     {
-      $$.push($2);
+      $$.push($orchestra_statement);
     }
   ;
 
 orchestra
   : orchestra_statements
     {
-      $$ = new Orchestra(@$, {children: $1});
+      $$ = new Orchestra(@$, {children: $orchestra_statements});
       return $$;
     }
   ;
