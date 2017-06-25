@@ -1,11 +1,9 @@
-/*
- * This lexer assumes that its input orchestra has been preprocessed. This means
- * that the orchestra cannot contain preprocessor directives, macro uses, next-
- * power-of-2 expanders (@ or @@ followed by digits), line continuations, or
- * comments. Also, all line endings must be line feeds (\n, U+000A).
- */
+// This lexer assumes that its input orchestra has been preprocessed. This means
+// that the orchestra cannot contain preprocessor directives, macro uses, next-
+// power-of-2 expanders (@ or @@ followed by digits), line continuations, or
+// comments. Also, all line endings must be line feeds (\n, U+000A).
 
-/* These patterns need to be kept synchronized with skipWhitespaceAndNewline. */
+// These patterns need to be kept synchronized with skipWhitespaceAndNewline.
 whitespace [ \t]+
 optional_whitespace [ \t]*
 
@@ -38,12 +36,10 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 
 <*>{whitespace} // Do nothing
 
-/*
- * The Csound orchestra lexer allows most punctuation to be optionally followed
- * by whitespace and a newline, but the whitespace and newline is considered
- * part of the punctuation token. This throws off error reporting, so skip the
- * whitespace and newline.
- */
+// The Csound orchestra lexer allows most punctuation to be optionally followed
+// by whitespace and a newline, but the whitespace and newline is considered
+// part of the punctuation token. This throws off error reporting, so skip the
+// whitespace and newline.
 "("  this.skipWhitespaceAndNewline(); return '(';
 ")"                                   return ')';
 "["  this.skipWhitespaceAndNewline(); return '[';
@@ -59,11 +55,9 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 ","  this.skipWhitespaceAndNewline(); return ',';
 "!"  this.skipWhitespaceAndNewline(); return '!';
 
-/*
- * The -> operator is called S_ELIPSIS
- * <https://github.com/csound/csound/search?q=S_ELIPSIS+path%3AEngine+filename%3Acsound_orc.lex>.
- * It appears to be undocumented.
- */
+// The -> operator is called S_ELIPSIS
+// <https://github.com/csound/csound/search?q=S_ELIPSIS+path%3AEngine+filename%3Acsound_orc.lex>.
+// It appears to be undocumented.
 "->"                                  return '->';
 
 "!=" this.skipWhitespaceAndNewline(); return '!=';
@@ -85,15 +79,13 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 "&"  this.skipWhitespaceAndNewline(); return '&';
 "#"  this.skipWhitespaceAndNewline(); return '#';
 
-/*
- * For backward compatibility with ISO/IEC 8859-1
- * <https://en.wikipedia.org/wiki/ISO/IEC_8859-1> encoded files, the Csound
- * lexer began using the regex pattern \xC2?\xAC to match ¬ in commit a2adbcc
- * <https://github.com/csound/csound/commit/a2adbccac16e11062236f6dcdf982f4d289800f2>.
- * (UTF-8 encodes ¬ as the 2-byte sequence C2 A2, and ISO/IEC 8859-1 encodes ¬
- * as the single byte A2.) Strings in JavaScript are always Unicode, so just use
- * a literal ¬.
- */
+// For backward compatibility with ISO/IEC 8859-1
+// <https://en.wikipedia.org/wiki/ISO/IEC_8859-1> encoded files, the Csound
+// lexer began using the regex pattern \xC2?\xAC to match ¬ in commit a2adbcc
+// <https://github.com/csound/csound/commit/a2adbccac16e11062236f6dcdf982f4d289800f2>.
+// (UTF-8 encodes ¬ as the 2-byte sequence C2 A2, and ISO/IEC 8859-1 encodes ¬
+// as the single byte A2.) Strings in JavaScript are always Unicode, so just use
+// a literal ¬.
 [~¬] this.skipWhitespaceAndNewline(); return '~';
 
 "if"       return 'IF';
@@ -284,7 +276,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
   });
 %}
 
-/* https://csound.github.io/docs/manual/opcode.html */
+// https://csound.github.io/docs/manual/opcode.html
 <before_opcode_output_type_signature>"0"|(?:[aikftSK](?:\[\])*)+
 %{
   this.popState();
@@ -321,7 +313,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
   });
 %}
 
-/* https://csound.github.io/docs/manual/opcode.html */
+// https://csound.github.io/docs/manual/opcode.html
 <before_opcode_input_type_signature>"0"|(?:[aijkftKOJVPopS](?:\[\])*)+
 %{
   this.popState();
@@ -339,7 +331,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
   });
 %}
 
-/* The Csound lexer does not emit integer tokens for hex integers. */
+// The Csound lexer does not emit integer tokens for hex integers.
 {hexadecimal_integer} return 'NUMBER';
 
 {decimal_integer} return 'DECIMAL_INTEGER';

@@ -358,7 +358,7 @@ elseif_statement
     }
   ;
 
-/* The lack of a NEWLINE after ELSE is intentional and matches Csound. */
+// The lack of a NEWLINE after ELSE is intentional and matches Csound.
 else
   : ELSE statements
     {
@@ -397,7 +397,7 @@ if_statement
     }
   ;
 
-/* The lack of a NEWLINE after DO and OD is intentional and matches Csound. */
+// The lack of a NEWLINE after DO and OD is intentional and matches Csound.
 do
   : DO
     {

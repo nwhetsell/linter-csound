@@ -1,15 +1,11 @@
-/*
- * These patterns need to be kept synchronized with the check for unnecessary
- * periods ending a use of a macro.
- */
+// These patterns need to be kept synchronized with the check for unnecessary
+// periods ending a use of a macro.
 identifier [A-Z_a-z]\w*
 macro_use \${identifier}\.?
 
-/*
- * To match the behavior of the Csound preprocessor, enclose these directives in
- * non-capturing groups so that Jison Lex doesn’t append word break patterns to
- * them. Also, #define is the only directive that allows whitespace after the #.
- */
+// To match the behavior of the Csound preprocessor, enclose these directives in
+// non-capturing groups so that Jison Lex doesn’t append word break patterns to
+// them. Also, #define is the only directive that allows whitespace after the #.
 include (?:"#include")
 define "#"[ \t]*(?:"define")
 undef (?:"#undef")
@@ -18,10 +14,8 @@ ifdef_or_ifndef "#if""n"?(?:"def")
 newline (?:\n|\r\n?)
 single_line_comment (?:";"|"//").*(?:{newline}|$)
 
-/*
- * The Csound preprocessor uses ; instead of a more general single-line comment
- * pattern.
- */
+// The Csound preprocessor uses ; instead of a more general single-line comment
+// pattern.
 line_continuation \\[ \t]*(?:";".*)?{newline}
 
 else "#else"
