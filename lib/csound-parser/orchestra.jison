@@ -202,9 +202,9 @@ logical_or_expression
 
 conditional_expression
   : logical_or_expression
-  | logical_or_expression '?' conditional_expression[if] ':' conditional_expression[else]
+  | logical_or_expression '?' conditional_expression ':' conditional_expression
     {
-      $$ = new ConditionalExpression(@$, {children: [$logical_or_expression, $if, $else]});
+      $$ = new ConditionalExpression(@$, {children: [$logical_or_expression, $conditional_expression1, $conditional_expression2]});
     }
   ;
 
