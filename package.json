@@ -24,6 +24,7 @@
     }
   },
   "devDependencies": {
+    "dedent-js": "^1.0.1",
     "jison": "https://github.com/GerHobbelt/jison/archive/0.4.18-180.tar.gz"
   },
   "packages-deps": [
