@@ -22,4 +22,5 @@ install:
 script:
   - cd lib/csound-parser
   - npm --global install jasmine
+  - npm install dedent-js
   - jasmine
