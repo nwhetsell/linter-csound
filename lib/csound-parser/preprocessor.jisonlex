@@ -1020,7 +1020,7 @@ lexer.lex = (function() {
   const token = original_lex.apply(this, arguments);
   if (this.done) {
     this.sourceMap.add(
-      [this.yylloc.first_line - 1, this.yylloc.first_column + 1],
+      [this.yylloc.first_line - 1, this.yylloc.first_column],
       [this.generatedLineCount, this.generatedColumnCount]
     );
   }
