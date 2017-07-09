@@ -54,12 +54,20 @@ primary_expression
     }
   ;
 
+array_member
+  : identifier '[' conditional_expression ']'
+    {
+      $$ = new ArrayMember(@$, {children: [$identifier, $conditional_expression]});
+    }
+  | array_member '[' conditional_expression ']'
+    {
+      $$ = new ArrayMember(@$, {children: [$array_member, $conditional_expression]});
+    }
+  ;
+
 postfix_expression
   : primary_expression
-  | postfix_expression '[' conditional_expression ']'
-    {
-      $$ = new ArrayMember(@$, {children: [$postfix_expression, $conditional_expression]});
-    }
+  | array_member
   | opcode '(' opcode_inputs ')'
     {
       $$ = new OpcodeExpression(@$, {children: [
@@ -226,16 +234,21 @@ compound_assignment_operator
   | '/=' { $$ = new Division(@$); }
   ;
 
+array_declarator
+  : identifier '[' ']'
+    {
+      $$ = new ArrayDeclarator(@$, {children: [$identifier]});
+    }
+  | array_declarator '[' ']'
+    {
+      $$ = new ArrayDeclarator(@$, {children: [$array_declarator]});
+    }
+  ;
+
 declarator
   : identifier
-  | declarator '[' ']'
-    {
-      $$ = new ArrayDeclarator(@$, {children: [$declarator]});
-    }
-  | declarator '[' conditional_expression ']'
-    {
-      $$ = new ArrayMember(@$, {children: [$declarator, $conditional_expression]});
-    }
+  | array_declarator
+  | array_member
   ;
 
 opcode_outputs
@@ -702,8 +715,6 @@ class Opcode extends ASTNode {
 class Orchestra extends ASTNode {}
 
 Object.assign(parser, {
-  instrumentNamesByString: {},
-
   Identifier: Identifier,
   NumberLiteral: NumberLiteral,
   StringLiteral: StringLiteral,
@@ -778,6 +789,8 @@ parser.addError = (function(error) {
     });
   }
 }).bind(parser);
+
+parser.instrumentNamesByString = {};
 
 parser.messages = [];
 
