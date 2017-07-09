@@ -182,7 +182,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
   this.begin('after_instrument_plus_sign');
   return '+';
 %}
-<after_instr_keyword>.
+<after_instr_keyword>.|\n
 %{
   throw new CsoundLexerError({
     severity: 'error',
@@ -222,7 +222,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
   this.begin('after_instrument_number_or_identifier');
   return 'IDENTIFIER';
 %}
-<after_instrument_plus_sign>.
+<after_instrument_plus_sign>.|\n
 %{
   throw new CsoundLexerError({
     severity: 'error',
@@ -247,7 +247,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
   this.begin('after_opcode_name');
   return 'IDENTIFIER';
 %}
-<after_opcode_keyword>.
+<after_opcode_keyword>.|\n
 %{
   throw new CsoundLexerError({
     severity: 'error',
@@ -284,7 +284,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
   this.begin('after_opcode_output_type_signature');
   return 'OPCODE_OUTPUT_TYPE_SIGNATURE';
 %}
-<before_opcode_output_type_signature>.
+<before_opcode_output_type_signature>.|\n
 %{
   throw new CsoundLexerError({
     severity: 'error',
@@ -320,7 +320,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
   this.symbolTable.addOpcode(this.opcodeName, {[(yytext === '0') ? '' : yytext]: [this.opcodeOutputTypeSignature]});
   return 'OPCODE_INPUT_TYPE_SIGNATURE';
 %}
-<before_opcode_input_type_signature>.
+<before_opcode_input_type_signature>.|\n
 %{
   throw new CsoundLexerError({
     severity: 'error',
@@ -409,13 +409,15 @@ const original_setInput = lexer.setInput;
 lexer.setInput = (function(input, yy) {
   if (yy && !yy.parser)
     return;
+  if (input.charAt(input.length - 1) !== '\n')
+    input += '\n';
   this.messages = [];
   this.sourceMap = {
     sourceLocation: location => location,
     sourceRange: range => range
   };
   this.symbolTable = new this.SymbolTable();
-  return original_setInput.apply(this, arguments);
+  return original_setInput.apply(this, [input, yy]);
 }).bind(lexer);
 
 lexer.skipWhitespaceAndNewline = (function() {
