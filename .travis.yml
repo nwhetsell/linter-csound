@@ -8,19 +8,21 @@ dist: trusty
 
 install:
   - sudo apt-get install -y libboost-dev libsndfile1-dev
-  - wget https://github.com/csound/csound/archive/6.09.0.tar.gz
-  - tar -xzf 6.09.0.tar.gz
+  - wget https://github.com/csound/csound/archive/6.09.1.tar.gz
+  - tar -xzf 6.09.1.tar.gz
   - mkdir csound
   - cd csound
-  - cmake ../csound-6.09.0
+  - cmake ../csound-6.09.1
   - make
   - sudo make install
   - sudo ldconfig
   - cd ..
   - npm install csound-api
 
-script:
-  - cd lib/csound-parser
+before_script:
   - npm --global install jasmine
   - npm install dedent-js
+  - cd lib/csound-parser
+
+script:
   - jasmine
