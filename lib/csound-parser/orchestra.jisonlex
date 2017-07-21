@@ -129,7 +129,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 ^{optional_whitespace}\w+":"(?:{whitespace}|\n|$)
 %{
   const labelName = this.nameFromLabel(yytext);
-  const label = this.symbolTable.labels[labelName];
+  const label = this.globalSymbolTable.labels[labelName];
   if (label) {
     this.messages.push({
       severity: 'warning',
@@ -149,7 +149,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
       }]
     });
   } else {
-    this.symbolTable.addLabel(labelName, this.sourceMap.sourceRange([
+    this.globalSymbolTable.addLabel(labelName, this.sourceMap.sourceRange([
       [yylloc.first_line - 1, yylloc.first_column],
       [yylloc.first_line - 1, yylloc.first_column + labelName.length]
     ]));
@@ -317,7 +317,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 <before_opcode_input_type_signature>"0"|(?:[aijkftKOJVPopS](?:\[\])*)+
 %{
   this.popState();
-  this.symbolTable.addOpcode(this.opcodeName, {[(yytext === '0') ? '' : yytext]: [this.opcodeOutputTypeSignature]});
+  this.globalSymbolTable.addOpcode(this.opcodeName, {[(yytext === '0') ? '' : yytext]: [this.opcodeOutputTypeSignature]});
   return 'OPCODE_INPUT_TYPE_SIGNATURE';
 %}
 <before_opcode_input_type_signature>.|\n
@@ -342,7 +342,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 
 {identifier}
 %{
-  const symbol = this.symbolTable.identifiers[yytext];
+  const symbol = this.globalSymbolTable.identifiers[yytext];
   if (symbol && symbol.kind === 'opcode') {
     if (symbol.isVoid)
       return 'VOID_OPCODE';
@@ -409,14 +409,16 @@ const original_setInput = lexer.setInput;
 lexer.setInput = (function(input, yy) {
   if (yy && !yy.parser)
     return;
-  if (input.charAt(input.length - 1) !== '\n')
-    input += '\n';
+
   this.messages = [];
   this.sourceMap = {
     sourceLocation: location => location,
     sourceRange: range => range
   };
-  this.symbolTable = new this.SymbolTable();
+  this.globalSymbolTable = new this.SymbolTable();
+
+  if (input.charAt(input.length - 1) !== '\n')
+    input += '\n';
   return original_setInput.apply(this, [input, yy]);
 }).bind(lexer);
 

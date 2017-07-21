@@ -42,7 +42,7 @@ LinterCsound =
           parser.lexer.SymbolTable = SymbolTable
           parser.yy.pre_parse = () ->
             parser.lexer.sourceMap = preprocessor.sourceMap
-            Object.assign parser.lexer.symbolTable.identifiers, SymbolTable.builtInOpcodeSymbolTable.identifiers
+            Object.assign parser.lexer.globalSymbolTable.identifiers, SymbolTable.builtInOpcodeSymbolTable.identifiers
           try
             orchestra = parser.parse preprocessor.getOutput()
           catch error
