@@ -219,11 +219,11 @@ conditional_expression
 labeled_statement
   : LABEL statement
     {
-      $$ = new LabeledStatement(@$, {children: [$LABEL, $statement]});
+      $$ = new LabeledStatement(@$, {children: [new Label(@LABEL, {string: $LABEL}), $statement]});
     }
   | LABEL EOF
     {
-      $$ = new LabeledStatement(@$, {children: [$LABEL]});
+      $$ = new LabeledStatement(@$, {children: [new Label(@LABEL, {string: $LABEL})]});
     }
   ;
 
@@ -630,10 +630,11 @@ class ConditionalExpression extends TestAndBodyNode {
   get else() { return this.children[2]; }
 }
 
+class Label extends ASTNode {}
 class LabeledStatement extends ASTNode {
   constructor(rangeOrLocation, properties) {
     super(rangeOrLocation, properties);
-    this.children[0] = parser.lexer.nameFromLabel(this.children[0]);
+    this.children[0] = parser.lexer.nameFromLabel(this.children[0].string);
   }
   get label() { return this.children[0]; }
   get statement() { return this.children[1]; }
@@ -751,6 +752,7 @@ Object.assign(parser, {
 
   ConditionalExpression: ConditionalExpression,
 
+  Label: Label,
   LabeledStatement: LabeledStatement,
   ArrayDeclarator: ArrayDeclarator,
   Assignment: Assignment,
