@@ -288,9 +288,13 @@ opcode_expression
   ;
 
 assignment_statement
-  : declarator '=' conditional_expression NEWLINE
+  : identifier '=' conditional_expression NEWLINE
     {
-      $$ = new Assignment(@$, {children: [$declarator, $conditional_expression]});
+      $$ = new Assignment(@$, {children: [$identifier, $conditional_expression]});
+    }
+  | array_member '=' conditional_expression NEWLINE
+    {
+      $$ = new Assignment(@$, {children: [$array_member, $conditional_expression]});
     }
   | identifier compound_assignment_operator conditional_expression NEWLINE
     {
@@ -555,6 +559,7 @@ orchestra
   : orchestra_statements
     {
       $$ = new Orchestra(@$, {children: $orchestra_statements});
+      $$.analyzeSemantics();
       return $$;
     }
   ;
@@ -573,9 +578,83 @@ class ASTNode {
     }
     Object.assign(this, properties);
   }
+
+  analyzeSemantics() {
+    if (this.children) {
+      for (const child of this.children) {
+        if (child.analyzeSemantics instanceof Function)
+          child.analyzeSemantics();
+      }
+    }
+  }
+
+  analyzeSemanticsOfVariableDefinition(identifier, arrayDimension) {
+    const name = identifier.string;
+
+    let type;
+    let symbolTable;
+    let variable = parser.lexer.globalSymbolTable.identifiers[name];
+    if (variable) {
+      type = variable.type;
+      symbolTable = parser.lexer.globalSymbolTable;
+    } else {
+      const result = /^(g)?([aikpSw])/.exec(name);
+      if (result) {
+        type = result[0];
+        symbolTable = result[1] ? parser.lexer.globalSymbolTable : parser.localSymbolTable;
+        variable = symbolTable.identifiers[name];
+      } else {
+        parser.addError({
+          severity: 'error',
+          location: {
+            position: identifier.range
+          },
+          excerpt: `Variable name ${parser.lexer.quote(name)} does not begin with type characters`
+        });
+        symbolTable = parser.localSymbolTable;
+      }
+    }
+    type += '[]'.repeat(arrayDimension);
+
+    if (variable) {
+      if (type !== variable.type) {
+        const error = {
+          severity: 'error',
+          location: {
+            position: identifier.range
+          },
+          excerpt: `Redefinition of ${parser.lexer.quote(name)} with a different type`
+        };
+        if (variable.range) {
+          error.trace = [{
+            severity: 'info',
+            location: {
+              position: variable.range
+            },
+            excerpt: 'Previous definition is here'
+          }]
+        }
+        parser.addError(error);
+      }
+    } else {
+      symbolTable.addVariable(name, type, identifier.range);
+    }
+  }
 }
 
-class Identifier extends ASTNode {}
+class Identifier extends ASTNode {
+  analyzeSemantics() {
+    if (!(parser.lexer.globalSymbolTable.identifiers[this.string] || parser.localSymbolTable.identifiers[this.string])) {
+      parser.addError({
+        severity: 'error',
+        location: {
+          position: this.range
+        },
+        excerpt: `Use of undefined variable ${parser.lexer.quote(this.string)}`
+      });
+    }
+  }
+}
 
 class NumberLiteral extends ASTNode {
   constructor(rangeOrLocation, properties) {
@@ -586,7 +665,10 @@ class NumberLiteral extends ASTNode {
 class StringLiteral extends ASTNode {}
 
 class ArrayMember extends ASTNode {}
-class OpcodeExpression extends ASTNode {}
+
+class OpcodeExpression extends ASTNode {
+  get opcode() { return this.children[0]; }
+}
 
 class UnaryPlus extends ASTNode {}
 class UnaryMinus extends ASTNode {}
@@ -641,11 +723,41 @@ class LabeledStatement extends ASTNode {
 }
 
 class ArrayDeclarator extends ASTNode {}
-class Assignment extends ASTNode {}
+class Assignment extends ASTNode {
+  analyzeSemantics() {
+    const declarator = this.children[0];
+    if (declarator instanceof Identifier)
+      this.analyzeSemanticsOfVariableDefinition(declarator);
+    super.analyzeSemantics();
+  }
+}
 class CompoundAssignment extends ASTNode {}
+
 class ArgumentList extends ASTNode {}
 class VoidOpcodeStatement extends ASTNode {}
-class OpcodeStatement extends VoidOpcodeStatement {}
+class OpcodeStatement extends VoidOpcodeStatement {
+  analyzeSemantics() {
+    const outputArguments = this.children[0].children;
+    if (outputArguments.length === 1 && outputArguments[0] instanceof ArrayDeclarator) {
+      let declarator = outputArguments[0];
+      if (declarator instanceof ArrayDeclarator) {
+        const opcodeExpression = this.children[1];
+        if (opcodeExpression.opcode.string === 'init') {
+          let arrayDimension = 0;
+          do {
+            arrayDimension++;
+            declarator = declarator.children[0];
+          } while (declarator instanceof ArrayDeclarator);
+          this.analyzeSemanticsOfVariableDefinition(declarator, arrayDimension);
+          opcodeExpression.analyzeSemantics();
+          return;
+        }
+      }
+    }
+
+    super.analyzeSemantics();
+  }
+}
 
 class Goto extends ASTNode {
   get label() { return this.children[0]; }
@@ -663,46 +775,52 @@ class Do extends ASTNode {}
 
 class Empty extends ASTNode {}
 
-class InstrumentNumberAndNameList extends ASTNode {}
-class Instrument extends ASTNode {
-  constructor(rangeOrLocation, properties) {
-    super(rangeOrLocation, properties);
-    for (const child of this.numberAndNameList.children) {
-      const name = (child instanceof UnaryOperation) ? child.children[1] : child;
-      const nameString = name.string;
-      if (nameString === '0') {
+class InstrumentNumberAndNameList extends ASTNode {
+  analyzeSemantics() {
+    for (const child of this.children) {
+      const numberOrName = (child instanceof UnaryOperation) ? child.children[1] : child;
+      const string = numberOrName.string;
+      if (string === '0') {
         parser.addError({
           severity: 'error',
           location: {
-            position: name.range
+            position: numberOrName.range
           },
           excerpt: 'Instrument number must be greater than 0'
         });
         return;
       }
-      const previousName = parser.instrumentNamesByString[nameString];
-      if (previousName) {
+
+      const previousNumberOrName = parser.instrumentNumbersAndNamesByString[string];
+      if (previousNumberOrName) {
         parser.addError({
           severity: 'error',
           location: {
-            position: name.range
+            position: numberOrName.range
           },
-          excerpt: `Instrument ${nameString} redefined`,
+          excerpt: `Instrument ${string} redefined`,
           trace: [{
             severity: 'info',
             location: {
-              position: previousName.range
+              position: previousNumberOrName.range
             },
             excerpt: 'Previous definition is here'
           }]
         });
         return;
       }
-      parser.instrumentNamesByString[nameString] = name;
+
+      parser.instrumentNumbersAndNamesByString[string] = numberOrName;
     }
   }
+}
 
-  get numberAndNameList() { return this.children[0]; }
+class Instrument extends ASTNode {
+  analyzeSemantics() {
+    parser.symbolTables.push(new parser.lexer.SymbolTable());
+    super.analyzeSemantics();
+    parser.symbolTables.pop();
+  }
 }
 
 class OpcodeOutputTypeSignature extends ASTNode {}
@@ -713,7 +831,12 @@ class Opcode extends ASTNode {
   get inputTypes() { return this.children[2]; }
 }
 
-class Orchestra extends ASTNode {}
+class Orchestra extends ASTNode {
+  analyzeSemantics() {
+    parser.symbolTables = [parser.lexer.globalSymbolTable];
+    super.analyzeSemantics();
+  }
+}
 
 Object.assign(parser, {
   Identifier: Identifier,
@@ -784,17 +907,23 @@ parser.addError = (function(error) {
   if (this.messages.length === 10) {
     this.parseError('', {}, this.JisonParserError, {
       severity: 'error',
-      location: {
-        position: error.range
-      },
+      location: error.location,
       excerpt: 'Too many errors emitted, stopping now'
     });
   }
 }).bind(parser);
 
-parser.instrumentNamesByString = {};
+parser.instrumentNumbersAndNamesByString = {};
 
 parser.messages = [];
+
+Object.defineProperties(parser, {
+  localSymbolTable: {
+    get: (function() {
+      return this.symbolTables[this.symbolTables.length - 1];
+    }).bind(parser)
+  }
+});
 
 class CsoundParserError extends Error {
   constructor(lintMessage) {
