@@ -410,12 +410,12 @@ lexer.setInput = (function(input, yy) {
   if (yy && !yy.parser)
     return;
 
+  this.globalSymbolTable = this.SymbolTable.makeGlobalSymbolTable();
   this.messages = [];
   this.sourceMap = {
     sourceLocation: location => location,
     sourceRange: range => range
   };
-  this.globalSymbolTable = new this.SymbolTable();
 
   if (input.charAt(input.length - 1) !== '\n')
     input += '\n';

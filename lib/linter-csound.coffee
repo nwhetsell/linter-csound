@@ -38,9 +38,7 @@ LinterCsound =
           # Parse the orchestra.
           parser = vm.runInThisContext(parserCode, {filename: parserFilename})(require)
           parser.lexer.SymbolTable = SymbolTable
-          parser.yy.pre_parse = (yy) ->
-            yy.lexer.sourceMap = preprocessor.sourceMap
-            Object.assign(yy.lexer.globalSymbolTable.identifiers, SymbolTable.builtInOpcodeSymbolTable.identifiers)
+          parser.yy.pre_parse = (yy) -> yy.lexer.sourceMap = preprocessor.sourceMap
           try
             orchestra = parser.parse(preprocessor.getOutput())
           catch error
