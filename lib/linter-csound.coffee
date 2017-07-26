@@ -5,8 +5,6 @@ path = require('path')
 SymbolTable = require(path.join(__dirname, 'csound-parser', 'symbol-table.js'))
 vm = require('vm')
 
-orchestraParserPath = path.join(__dirname, 'csound-parser', 'orchestra-parser.js')
-
 module.exports =
 LinterCsound =
   provideLinter: () ->
