@@ -755,6 +755,11 @@ class OpcodeStatement extends VoidOpcodeStatement {
       }
     }
 
+    for (const declarator of outputArguments) {
+      if (declarator instanceof Identifier)
+        this.analyzeSemanticsOfVariableDefinition(declarator);
+    }
+
     super.analyzeSemantics();
   }
 }
