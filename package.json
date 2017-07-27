@@ -1,7 +1,7 @@
 {
   "name": "linter-csound",
   "main": "./lib/linter-csound",
-  "version": "0.2.8",
+  "version": "0.3.0",
   "description": "Lint Csound orchestras",
   "keywords": [
     "csound",
