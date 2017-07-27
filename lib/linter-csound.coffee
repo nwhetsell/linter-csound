@@ -8,6 +8,9 @@ vm = require('vm')
 module.exports =
 LinterCsound =
   provideLinter: () ->
+    documentProcessorFilename = 'document-processor.js'
+    documentProcessorCode = fs.readFileSync(path.join(__dirname, 'csound-parser', documentProcessorFilename), 'utf-8')
+
     preprocessorFilename = 'preprocessor.js'
     preprocessorCode = fs.readFileSync(path.join(__dirname, 'csound-parser', preprocessorFilename), 'utf-8')
 
@@ -16,17 +19,32 @@ LinterCsound =
 
     return {
       name: 'Csound'
-      grammarScopes: ['source.csound']
+      grammarScopes: ['source.csound', 'source.csound-document']
       scope: 'file'
       lintsOnChange: true
 
       lint: (editor) ->
         return new Promise((resolve, reject) ->
+          if editor.getRootScopeDescriptor().getScopesArray()[0] is 'source.csound-document'
+            documentProcessor = vm.runInThisContext(documentProcessorCode, {filename: documentProcessorFilename})(require)
+            documentProcessor.filePath = editor.getPath()
+            documentProcessor.setInput(editor.getText())
+            try
+              documentProcessor.lex()
+            catch error
+              if error.lintMessage
+                resolve([error.lintMessage])
+              else
+                throw error
+            orchestraString = '\n'.repeat(documentProcessor.orchestraElementRange[0][0]) + ' '.repeat(documentProcessor.orchestraElementRange[1][1]) + documentProcessor.orchestra
+          else
+            orchestraString = editor.getText()
+
           # Preprocess the orchestra.
           preprocessor = vm.runInThisContext(preprocessorCode, {filename: preprocessorFilename})(require)
           preprocessor.code = preprocessorCode
           preprocessor.filePath = editor.getPath()
-          preprocessor.setInput(editor.getText())
+          preprocessor.setInput(orchestraString)
           try
             preprocessor.lex()
           catch error
@@ -40,7 +58,7 @@ LinterCsound =
           parser.lexer.SymbolTable = SymbolTable
           parser.yy.pre_parse = (yy) -> yy.lexer.sourceMap = preprocessor.sourceMap
           try
-            orchestra = parser.parse(preprocessor.getOutput())
+            parser.parse(preprocessor.getOutput())
           catch error
             lintMessage = error.hash.exception?.lintMessage
             if lintMessage
@@ -56,8 +74,12 @@ LinterCsound =
                 excerpt: error.message
               })
 
-          # Combine messages from preprocessor, lexer, and parser.
-          messages = preprocessor.messages
+          # Combine messages from document processor, preprocessor, lexer, and
+          # parser.
+          messages = []
+          if documentProcessor
+            messages.push(documentProcessor.messages...)
+          messages.push(preprocessor.messages...)
           for message in [parser.lexer.messages..., parser.messages...]
             message.location.file = editor.getPath()
             messages.push(message)
@@ -70,6 +92,6 @@ LinterCsound =
               trace.location.file ?= editor.getPath()
               messages.splice(index + 1, 0, trace)
 
-          resolve messages
+          resolve(messages)
         )
     }
