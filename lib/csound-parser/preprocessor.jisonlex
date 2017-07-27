@@ -11,7 +11,7 @@ define "#"[ \t]*(?:"define")
 undef (?:"#undef")
 ifdef_or_ifndef "#if""n"?(?:"def")
 
-newline (?:\n|\r\n?)
+newline \n|\r\n?
 single_line_comment (?:";"|"//").*(?:{newline}|$)
 
 // The Csound preprocessor uses ; instead of a more general single-line comment
@@ -139,7 +139,7 @@ endif "#end"(?:"if")?\b
   this.startRanges.push(this.rangeFromLocation(yylloc));
   this.addText(yytext);
 %}
-<quoted_string>"\\".|[^$"\n\r] this.addText(yytext);
+<quoted_string>\\.|[^$"\n\r] this.addText(yytext);
 <quoted_string>\"
 %{
   this.startRanges.pop();
