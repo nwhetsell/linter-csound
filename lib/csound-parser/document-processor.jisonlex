@@ -226,6 +226,7 @@ lexer.setInput = (function(input, yy) {
   this.scoreElementRange = null;
   this.startRanges = [];
   this.stringName = null;
+  this.synthesizerElementName = null;
   return original_setInput.apply(this, arguments);
 }).bind(lexer);
 
