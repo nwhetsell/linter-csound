@@ -288,13 +288,9 @@ opcode_expression
   ;
 
 assignment_statement
-  : identifier '=' conditional_expression NEWLINE
+  : declarator '=' conditional_expression NEWLINE
     {
-      $$ = new Assignment(@$, {children: [$identifier, $conditional_expression]});
-    }
-  | array_member '=' conditional_expression NEWLINE
-    {
-      $$ = new Assignment(@$, {children: [$array_member, $conditional_expression]});
+      $$ = new Assignment(@$, {children: [$declarator, $conditional_expression]});
     }
   | identifier compound_assignment_operator conditional_expression NEWLINE
     {
@@ -602,7 +598,21 @@ class ASTNode {
     }
   }
 
-  analyzeSemanticsOfVariableDefinition(identifier, arrayDimension) {
+  analyzeSemanticsOfDeclarator(declarator) {
+    let identifier;
+    let arrayDimension = 0;
+    if (declarator instanceof ArrayDeclarator) {
+      identifier = declarator;
+      do {
+        identifier = identifier.children[0];
+        arrayDimension++;
+      } while (identifier instanceof ArrayDeclarator);
+    } else if (declarator instanceof Identifier) {
+      identifier = declarator;
+    } else {
+      return;
+    }
+
     const name = identifier.string;
 
     let type;
@@ -739,9 +749,7 @@ class LabeledStatement extends ASTNode {
 class ArrayDeclarator extends ASTNode {}
 class Assignment extends ASTNode {
   analyzeSemantics() {
-    const declarator = this.children[0];
-    if (declarator instanceof Identifier)
-      this.analyzeSemanticsOfVariableDefinition(declarator);
+    this.analyzeSemanticsOfDeclarator(this.children[0]);
     super.analyzeSemantics();
   }
 }
@@ -751,30 +759,15 @@ class ArgumentList extends ASTNode {}
 class VoidOpcodeStatement extends ASTNode {}
 class OpcodeStatement extends VoidOpcodeStatement {
   analyzeSemantics() {
-    const outputArguments = this.children[0].children;
-    if (outputArguments.length === 1 && outputArguments[0] instanceof ArrayDeclarator) {
-      let declarator = outputArguments[0];
-      if (declarator instanceof ArrayDeclarator) {
-        const opcodeExpression = this.children[1];
-        if (opcodeExpression.opcode.string === 'init') {
-          let arrayDimension = 0;
-          do {
-            arrayDimension++;
-            declarator = declarator.children[0];
-          } while (declarator instanceof ArrayDeclarator);
-          this.analyzeSemanticsOfVariableDefinition(declarator, arrayDimension);
-          opcodeExpression.analyzeSemantics();
-          return;
-        }
-      }
+    for (const outputArgument of this.children[0].children) {
+      this.analyzeSemanticsOfDeclarator(outputArgument);
     }
 
-    for (const declarator of outputArguments) {
-      if (declarator instanceof Identifier)
-        this.analyzeSemanticsOfVariableDefinition(declarator);
+    for (let i = 1, childCount = this.children.length; i < childCount; i++) {
+      const child = this.children[i];
+      if (child.analyzeSemantics instanceof Function)
+        child.analyzeSemantics();
     }
-
-    super.analyzeSemantics();
   }
 }
 
