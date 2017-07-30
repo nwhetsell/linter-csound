@@ -3,7 +3,8 @@
 // power-of-2 expanders (@ or @@ followed by digits), line continuations, or
 // comments. Also, all line endings must be line feeds (\n, U+000A).
 
-// These patterns need to be kept synchronized with skipWhitespaceAndNewline.
+// These patterns need to be kept synchronized with skipWhitespaceAndNewline and
+// the check for whitespace after a void opcode (an opcode with no outputs).
 whitespace [ \t]+
 optional_whitespace [ \t]*
 
@@ -26,6 +27,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %x after_opcode_output_type_signature
 %x before_opcode_input_type_signature
 
+%x whitespace_after_void_opcode
 %x opcode_output_type_annotation
 
 %options flex
@@ -33,6 +35,21 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %%
 
 \n return 'NEWLINE';
+
+// Statements like
+//   void_opcode(input)
+// and
+//   void_opcode (input)
+// are ambiguous. In both cases, either input is being passed to void_opcode
+// using function syntax, or (input) is being passed to void_opcode using
+// standard Csound syntax. Csound avoids this ambiguity by making the left
+// parenthesis part of the opcode token, but this throws off error reporting.
+// Use semantic whitespace instead.
+<whitespace_after_void_opcode>{whitespace}
+%{
+  this.popState();
+  return 'WHITESPACE';
+%}
 
 <*>{whitespace} // Do nothing
 
@@ -344,8 +361,14 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %{
   const symbol = this.globalSymbolTable.identifiers[yytext];
   if (symbol && symbol.kind === 'opcode') {
-    if (symbol.isVoid)
+    if (symbol.isVoid) {
+      const character = this.input();
+      // This needs to be kept synchronized with the whitespace patterns.
+      if (character === ' ' || character === '\t')
+        this.begin('whitespace_after_void_opcode');
+      this.unput(character);
       return 'VOID_OPCODE';
+    }
 
     const character = this.input();
     if (character === ':')
@@ -363,7 +386,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
   this.popState();
   return 'OPCODE_OUTPUT_TYPE_ANNOTATION';
 %}
-<opcode_output_type_annotation>[^ak]
+<opcode_output_type_annotation>.|\n
 %{
   throw new CsoundLexerError({
     severity: 'error',

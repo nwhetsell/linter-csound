@@ -310,14 +310,28 @@ assignment_statement
   ;
 
 void_opcode_statement
-  : void_opcode opcode_inputs NEWLINE
+  : void_opcode WHITESPACE opcode_inputs NEWLINE
     {
       $$ = new VoidOpcodeStatement(@$, {children: [
         new OpcodeExpression({
-          first_line: @void_opcode.first_line,
+          first_line:   @void_opcode.first_line,
           first_column: @void_opcode.first_column,
-          last_line: @opcode_inputs.last_line,
-          last_column: @opcode_inputs.last_column
+          last_line:    @opcode_inputs.last_line,
+          last_column:  @opcode_inputs.last_column
+        }, {children: [
+          $void_opcode,
+          new ArgumentList(@opcode_inputs, {children: $opcode_inputs})
+        ]})
+      ]});
+    }
+  | void_opcode '(' opcode_inputs ')'[right_parenthesis] NEWLINE
+    {
+      $$ = new VoidOpcodeStatement(@$, {children: [
+        new OpcodeExpression({
+          first_line:   @void_opcode.first_line,
+          first_column: @void_opcode.first_column,
+          last_line:    @right_parenthesis.last_line,
+          last_column:  @right_parenthesis.last_column
         }, {children: [
           $void_opcode,
           new ArgumentList(@opcode_inputs, {children: $opcode_inputs})
