@@ -11,7 +11,7 @@ This [Atom](https://atom.io/) package adds syntax checking for [Csound](https://
 
 ## linter-csound’s Orchestra Parser
 
-To check the syntax of orchestras, linter-csound uses a [preprocessor and parser](https://github.com/nwhetsell/linter-csound/tree/master/lib/csound-parser) generated using the [GerHobbelt fork](https://github.com/GerHobbelt/jison) of [Jison](https://zaa.ch/jison/). The [grammar](https://github.com/nwhetsell/linter-csound/blob/master/lib/csound-parser/orchestra.jison) used by the parser is based on [this JavaScript grammar](http://www.cjihrig.com/development/jsparser/ecmascript.jison) (which you can read about [here](http://cjihrig.com/blog/creating-a-javascript-parser/)) and [this C grammar](http://www.quut.com/c/ANSI-C-grammar-y-2011.html). To generate the preprocessor and parser on macOS, open a Terminal, `cd` to linter-csound/lib/csound-parser, and then run:
+To check the syntax of orchestras, linter-csound uses a [preprocessor and parser](lib/csound-parser) generated using the [GerHobbelt fork](https://github.com/GerHobbelt/jison) of [Jison](https://zaa.ch/jison/). The [grammar](lib/csound-parser/orchestra.jison) used by the parser is based on [this JavaScript grammar](http://www.cjihrig.com/development/jsparser/ecmascript.jison) (which you can read about [here](http://cjihrig.com/blog/creating-a-javascript-parser/)) and [this C grammar](http://www.quut.com/c/ANSI-C-grammar-y-2011.html). To generate the preprocessor and parser on macOS, open a Terminal, `cd` to linter-csound/lib/csound-parser, and then run:
 
 ```sh
 npm install https://github.com/GerHobbelt/jison/archive/0.4.18-180.tar.gz
@@ -22,9 +22,9 @@ The linter-csound preprocessor and parser try to match Csound’s behavior, but 
 
 This Jison file | Corresponds to this Flex/Bison file
 ----------------|------------------------------------
-[preprocessor.jisonlex](https://github.com/nwhetsell/linter-csound/blob/master/lib/csound-parser/preprocessor.jisonlex) | [csound_pre.lex](https://github.com/csound/csound/blob/develop/Engine/csound_pre.lex)
-[orchestra.jisonlex](https://github.com/nwhetsell/linter-csound/blob/master/lib/csound-parser/orchestra.jisonlex) | [csound_orc.lex](https://github.com/csound/csound/blob/develop/Engine/csound_orc.lex)
-[orchestra.jison](https://github.com/nwhetsell/linter-csound/blob/master/lib/csound-parser/orchestra.jison) | [csound_orc.y](https://github.com/csound/csound/blob/develop/Engine/csound_orc.y)
+[preprocessor.jisonlex](lib/csound-parser/preprocessor.jisonlex) | [csound_pre.lex](https://github.com/csound/csound/blob/develop/Engine/csound_pre.lex)
+[orchestra.jisonlex](lib/csound-parser/orchestra.jisonlex) | [csound_orc.lex](https://github.com/csound/csound/blob/develop/Engine/csound_orc.lex)
+[orchestra.jison](lib/csound-parser/orchestra.jison) | [csound_orc.y](https://github.com/csound/csound/blob/develop/Engine/csound_orc.y)
 
 ### Known Differences from Csound’s Preprocessor
 
@@ -46,4 +46,4 @@ Csound’s preprocessor:
 
 ### Known Differences from Csound’s Parser
 
-* Csound’s parser silently ignores duplicate [labels](http://csound.github.io/docs/manual/OrchTop.html), while linter-csound gives a warning.
+* Csound’s parser silently ignores duplicate [labels](https://csound.github.io/docs/manual/OrchTop.html), while linter-csound gives a warning.
