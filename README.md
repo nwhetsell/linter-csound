@@ -7,7 +7,7 @@ This [Atom](https://atom.io/) package adds syntax checking for [Csound](https://
 
 ## Including Files
 
-The linter-csound preprocessor searches paths for files included using [#include](https://csound.github.io/docs/manual/include.html) in this order:
+The linter-csound preprocessor searches paths for files included using [`#include`](https://csound.github.io/docs/manual/include.html) in this order:
 
 1. The paths returned by [`Project::getPaths`](https://atom.io/docs/api/latest/Project#instance-getPaths). (This array usually contains one path that’s roughly equivalent to the current directory.)
 
