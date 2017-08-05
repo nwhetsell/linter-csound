@@ -690,8 +690,8 @@ endif "#end"(?:"if")?\b
         } catch (error) {
           // Do nothing
         }
-        // Finally, if this lexer has an includeDirectories member variable,
-        // search those.
+        // Finally, if this lexer has an includeDirectories property, search
+        // those.
         if (this.includeDirectories)
           paths.push(...this.includeDirectories);
         paths = paths.map(directory => path.join(directory, includeFilePath));
@@ -1048,10 +1048,12 @@ lexer.makePreprocessor = (function(input) {
   // A function like yy_scan_string is unavailable in Jison Lex.
   const preprocessor = vm.runInThisContext(this.code)(require);
   assert.notStrictEqual(preprocessor, this);
-  preprocessor.setInput(input);
-  Object.assign(preprocessor.macrosByName, this.macrosByName);
-  preprocessor.isScorePreprocessor = this.isScorePreprocessor;
   preprocessor.code = this.code;
+  preprocessor.includeDirectories = this.includeDirectories;
+  preprocessor.isScorePreprocessor = this.isScorePreprocessor;
+  preprocessor.setInput(input);
+  preprocessor.currentDirectories = this.currentDirectories;
+  Object.assign(preprocessor.macrosByName, this.macrosByName);
   return preprocessor;
 }).bind(lexer);
 
