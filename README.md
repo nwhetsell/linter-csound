@@ -5,6 +5,25 @@
 
 This [Atom](https://atom.io/) package adds syntax checking for [Csound](https://csound.github.io/) orchestras.
 
+## Including Files
+
+The linter-csound preprocessor searches paths for files included using [#include](https://csound.github.io/docs/manual/include.html) in this order:
+
+1. The paths returned by [`Project::getPaths`](https://atom.io/docs/api/latest/Project#instance-getPaths). (This array usually contains one path that’s roughly equivalent to the current directory.)
+
+2. The path of the file being preprocessed.
+
+3. If there are files named .csound-include-directories in the paths returned by `Project::getPaths`, the paths (one per line) contained in each .csound-include-directories file. For example, if you create a file named .csound-include-directories in the root folder of your project, and this file contains
+
+    ```
+    /usr/local/csound/udos
+    /usr/local/csound/more-udos
+    ```
+
+    then linter-csound will search /usr/local/csound/udos and /usr/local/csound/more-udos for included files.
+
+4. Paths you enter in linter-csound’s Settings.
+
 ## Contributing
 
 [Open an issue](https://github.com/nwhetsell/linter-csound/issues), or [fork this project and make a pull request](https://guides.github.com/activities/forking/).

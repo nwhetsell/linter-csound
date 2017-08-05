@@ -7,6 +7,15 @@ vm = require('vm')
 
 module.exports =
 LinterCsound =
+  config:
+    includeDirectories:
+      title: 'Directories for included files'
+      type: 'array'
+      description: 'Comma-separated list of directories for `#include` search'
+      default: []
+      items:
+        type: 'string'
+
   provideLinter: () ->
     documentProcessorFilename = 'document-processor.js'
     documentProcessorCode = fs.readFileSync(path.join(__dirname, 'csound-parser', documentProcessorFilename), 'utf-8')
@@ -44,7 +53,9 @@ LinterCsound =
           preprocessor = vm.runInThisContext(preprocessorCode, {filename: preprocessorFilename})(require)
           preprocessor.code = preprocessorCode
           preprocessor.filePath = editor.getPath()
+          preprocessor.includeDirectories = atom.config.get('linter-csound.includeDirectories')
           preprocessor.setInput(orchestraString)
+          preprocessor.currentDirectories = atom.project.getPaths()
           try
             preprocessor.lex()
           catch error
