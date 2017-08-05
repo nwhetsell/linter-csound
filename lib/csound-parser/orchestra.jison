@@ -668,14 +668,29 @@ class ASTNode {
 
 class Identifier extends ASTNode {
   analyzeSemantics() {
-    if (!(parser.lexer.globalSymbolTable.identifiers[this.string] || parser.localSymbolTable.identifiers[this.string])) {
-      parser.addError({
-        severity: 'error',
-        location: {
-          position: this.range
-        },
-        excerpt: `Use of undefined variable ${parser.lexer.quote(this.string)}`
-      });
+    const localSymbolTable = parser.localSymbolTable;
+    if (!(localSymbolTable.identifiers[this.string] || parser.lexer.globalSymbolTable.identifiers[this.string])) {
+      // Check whether the identifier is for a p-field.
+      const result = /p(\d+)/.exec(this.string);
+      if (result) {
+        if (localSymbolTable === parser.lexer.globalSymbolTable || result[1] === '0') {
+          parser.messages.push({
+            severity: 'warning',
+            location: {
+              position: this.range
+            },
+            excerpt: 'Value of p-field is always 0'
+          });
+        }
+      } else {
+        parser.addError({
+          severity: 'error',
+          location: {
+            position: this.range
+          },
+          excerpt: `Use of undefined variable ${parser.lexer.quote(this.string)}`
+        });
+      }
     }
   }
 }
