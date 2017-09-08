@@ -287,14 +287,12 @@ endif "#end"(?:"if")?\b
   this.macroParameterValue += yytext;
 %}
 
-<macro_parameter_value_quoted_string,macro_parameter_value_braced_string,macro_parameter_value_parenthetical>\)
+<macro_parameter_value_quoted_string,macro_parameter_value_braced_string>[#')]
 %{
   this.macroParameterValue += yytext;
-  if ('macro_parameter_value_parenthetical' === YY_START)
-    this.popState();
   const solution = {
     position: this.rangeFromLocation(yylloc),
-    replaceWith: '\\)'
+    replaceWith: '\\' + yytext
   };
   this.messages.push({
     severity: 'error',
@@ -307,24 +305,24 @@ endif "#end"(?:"if")?\b
   });
 %}
 
-<macro_parameter_value_quoted_string,macro_parameter_value_braced_string>\\\) this.macroParameterValue += ')';
+<macro_parameter_value_quoted_string,macro_parameter_value_braced_string>\\[#')] this.macroParameterValue += yytext.charAt(yyleng - 1);
 
 <macro_parameter_value_quoted_string>\"
 %{
+  this.macroParameterValue += yytext;
   this.startRanges.pop();
   this.popState();
-  this.macroParameterValue += yytext;
 %}
 
 <macro_parameter_value_braced_string>"}}"
 %{
+  this.macroParameterValue += yytext;
   this.startRanges.pop();
   this.popState();
-  this.macroParameterValue += yytext;
 %}
 
-<macro_parameter_value_parenthetical>\(   this.macroParameterValue += yytext; this.begin(YY_START);
-<macro_parameter_value_parenthetical>\\\) this.macroParameterValue += ')';    this.popState();
+<macro_parameter_value_parenthetical>\( this.macroParameterValue += yytext; this.begin(YY_START);
+<macro_parameter_value_parenthetical>\) this.macroParameterValue += yytext; this.popState();
 
 <macro_parameter_value,macro_parameter_value_quoted_string,macro_parameter_value_braced_string,macro_parameter_value_parenthetical>.|{newline}
 %{
@@ -680,15 +678,15 @@ endif "#end"(?:"if")?\b
         // If there’s a file named .csound-include-directories in the current
         // directory, assume it contains a list of directory paths, one per
         // line, and also search those.
-        try {
-          for (const directory of this.currentDirectories) {
-            const absolutePath = path.join(directory, '.csound-include-directories');
+        for (const directory of this.currentDirectories) {
+          const absolutePath = path.join(directory, '.csound-include-directories');
+          try {
             const stats = fs.statSync(absolutePath);
             if (stats && stats.isFile())
               paths.push(...fs.readFileSync(absolutePath, 'utf8').trim().split(/\n|\r\n?/));
+          } catch (error) {
+            // Do nothing
           }
-        } catch (error) {
-          // Do nothing
         }
         // Finally, if this lexer has an includeDirectories property, search
         // those.
