@@ -44,6 +44,7 @@ primary_expression
     }
   | error
     {
+      $$ = $1;
       parser.addError({
         severity: 'error',
         location: {
@@ -85,10 +86,14 @@ postfix_expression
   ;
 
 unary_operator
-  : '+'  { $$ = new UnaryPlus(@$); }
-  | '-'  { $$ = new UnaryMinus(@$); }
-  | '~'  { $$ = new BitwiseComplement(@$); }
-  | '!'  { $$ = new Not(@$); }
+  : '+'
+    { $$ = new UnaryPlus(@$); }
+  | '-'
+    { $$ = new UnaryMinus(@$); }
+  | '~'
+    { $$ = new BitwiseComplement(@$); }
+  | '!'
+    { $$ = new Not(@$); }
   ;
 
 unary_expression
@@ -100,10 +105,14 @@ unary_expression
   ;
 
 multiplicative_operator
-  : '*'  { $$ = new Multiplication(@$); }
-  | '/'  { $$ = new Division(@$); }
-  | '^'  { $$ = new Power(@$); }
-  | '%'  { $$ = new Modulus(@$); }
+  : '*'
+    { $$ = new Multiplication(@$); }
+  | '/'
+    { $$ = new Division(@$); }
+  | '^'
+    { $$ = new Power(@$); }
+  | '%'
+    { $$ = new Modulus(@$); }
   ;
 
 multiplicative_expression
@@ -115,8 +124,10 @@ multiplicative_expression
   ;
 
 additive_operator
-  : '+'  { $$ = new Plus(@$); }
-  | '-'  { $$ = new Minus(@$); }
+  : '+'
+    { $$ = new Plus(@$); }
+  | '-'
+    { $$ = new Minus(@$); }
   ;
 
 additive_expression
@@ -128,8 +139,10 @@ additive_expression
   ;
 
 shift_operator
-  : '<<' { $$ = new LeftShift(@$); }
-  | '>>' { $$ = new RightShift(@$); }
+  : '<<'
+    { $$ = new LeftShift(@$); }
+  | '>>'
+    { $$ = new RightShift(@$); }
   ;
 
 shift_expression
@@ -141,10 +154,14 @@ shift_expression
   ;
 
 relational_operator
-  : '<'  { $$ = new LessThan(@$); }
-  | '>'  { $$ = new GreaterThan(@$); }
-  | '<=' { $$ = new LessThanOrEqual(@$); }
-  | '>=' { $$ = new GreaterThanOrEqual(@$); }
+  : '<'
+    { $$ = new LessThan(@$); }
+  | '>'
+    { $$ = new GreaterThan(@$); }
+  | '<='
+    { $$ = new LessThanOrEqual(@$); }
+  | '>='
+    { $$ = new GreaterThanOrEqual(@$); }
   ;
 
 relational_expression
@@ -156,8 +173,10 @@ relational_expression
   ;
 
 equality_operator
-  : '==' { $$ = new Equal(@$); }
-  | '!=' { $$ = new NotEqual(@$); }
+  : '=='
+    { $$ = new Equal(@$); }
+  | '!='
+    { $$ = new NotEqual(@$); }
   ;
 
 equality_expression
@@ -228,10 +247,14 @@ labeled_statement
   ;
 
 compound_assignment_operator
-  : '+=' { $$ = new Plus(@$); }
-  | '-=' { $$ = new Minus(@$); }
-  | '*=' { $$ = new Multiplication(@$); }
-  | '/=' { $$ = new Division(@$); }
+  : '+='
+    { $$ = new Plus(@$); }
+  | '-='
+    { $$ = new Minus(@$); }
+  | '*='
+    { $$ = new Multiplication(@$); }
+  | '/='
+    { $$ = new Division(@$); }
   ;
 
 array_declarator
@@ -258,6 +281,7 @@ opcode_outputs
     }
   | opcode_outputs ',' declarator
     {
+      $$ = $1;
       $$.push($declarator);
     }
   ;
@@ -269,6 +293,7 @@ opcode_inputs
     }
   | opcode_inputs ',' conditional_expression
     {
+      $$ = $1;
       $$.push($conditional_expression);
     }
   ;
@@ -347,6 +372,7 @@ goto_statement
     }
   | GOTO error NEWLINE
     {
+      $$ = $1;
       parser.addError({
         severity: 'error',
         location: {
@@ -368,6 +394,7 @@ then_statement
     }
   | THEN error NEWLINE
     {
+      $$ = $1;
       parser.addError({
         severity: 'error',
         location: {
@@ -397,10 +424,12 @@ elseif
   : elseif_statement
   | elseif elseif_statement
     {
+      $$ = $1;
       $$.children.push(new Else(@elseif_statement, {children: [$elseif_statement]}));
     }
   | elseif else
     {
+      $$ = $1;
       $$.children.push($else);
     }
   ;
@@ -460,6 +489,7 @@ statement
     }
   | error
     {
+      $$ = $1;
       parser.addError({
         severity: 'error',
         location: {
@@ -477,6 +507,7 @@ statements
     }
   | statements statement
     {
+      $$ = $1;
       $$.push($statement);
     }
   ;
@@ -497,6 +528,7 @@ instrument_numbers_and_names
     }
   | instrument_numbers_and_names ',' instrument_number_or_name
     {
+      $$ = $1;
       $$.push($instrument_number_or_name);
     }
   ;
@@ -561,6 +593,7 @@ orchestra_statements
     }
   | orchestra_statements orchestra_statement
     {
+      $$ = $1;
       $$.push($orchestra_statement);
     }
   ;
