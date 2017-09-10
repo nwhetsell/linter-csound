@@ -42,9 +42,8 @@ LinterCsound =
               documentProcessor.lex()
             catch error
               if error.lintMessage
-                resolve([error.lintMessage])
-              else
-                throw error
+                return resolve([error.lintMessage])
+              throw error
             orchestraString = '\n'.repeat(documentProcessor.orchestraElementRange[0][0]) + ' '.repeat(documentProcessor.orchestraElementRange[1][1]) + documentProcessor.orchestra
           else
             orchestraString = editor.getText()
@@ -60,9 +59,11 @@ LinterCsound =
             preprocessor.lex()
           catch error
             if error.lintMessage
-              resolve([error.lintMessage])
-            else
-              throw error
+              return resolve([error.lintMessage])
+            throw error
+          for message in preprocessor.messages
+            if message.severity is 'error'
+              return resolve(preprocessor.messages)
 
           # Parse the orchestra.
           parser = vm.runInThisContext(parserCode, {filename: parserFilename})(require)

@@ -156,6 +156,7 @@ endif "#end"(?:"if")?\b
     },
     excerpt: `Missing terminating ${this.quote('"')}`
   });
+  this.popState();
 %}
 
 "{{"
