@@ -56,7 +56,7 @@ endif "#end"(?:"if")?\b
 %x score_loop
 %x score_loop_after_left_brace
 %x score_loop_after_repeat_count
-%x score_loop_after_repitition_macro_name
+%x score_loop_after_repetition_macro_name
 %x inner_score_loop
 
 %%
@@ -853,7 +853,7 @@ endif "#end"(?:"if")?\b
 %{
   this.macro.repititionMacro = {name: yytext};
   this.popState();
-  this.begin('score_loop_after_repitition_macro_name');
+  this.begin('score_loop_after_repetition_macro_name');
 %}
 <score_loop_after_repeat_count>{newline} this.popState();
 <score_loop_after_repeat_count>\s+ // Do nothing
@@ -869,9 +869,9 @@ endif "#end"(?:"if")?\b
   });
 %}
 
-<score_loop_after_repitition_macro_name>{newline} this.popState();
-<score_loop_after_repitition_macro_name>\s+ // Do nothing
-<score_loop_after_repitition_macro_name>.
+<score_loop_after_repetition_macro_name>{newline} this.popState();
+<score_loop_after_repetition_macro_name>\s+ // Do nothing
+<score_loop_after_repetition_macro_name>.
 %{
   throw new CsoundPreprocessorError({
     severity: 'error',
