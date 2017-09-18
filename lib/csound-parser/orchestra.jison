@@ -44,7 +44,6 @@ primary_expression
     }
   | error
     {
-      $$ = $1;
       parser.addError({
         severity: 'error',
         location: {
@@ -86,14 +85,10 @@ postfix_expression
   ;
 
 unary_operator
-  : '+'
-    { $$ = new UnaryPlus(@$); }
-  | '-'
-    { $$ = new UnaryMinus(@$); }
-  | '~'
-    { $$ = new BitwiseComplement(@$); }
-  | '!'
-    { $$ = new Not(@$); }
+  : '+'  { $$ = new UnaryPlus(@$); }
+  | '-'  { $$ = new UnaryMinus(@$); }
+  | '~'  { $$ = new BitwiseComplement(@$); }
+  | '!'  { $$ = new Not(@$); }
   ;
 
 unary_expression
@@ -105,14 +100,10 @@ unary_expression
   ;
 
 multiplicative_operator
-  : '*'
-    { $$ = new Multiplication(@$); }
-  | '/'
-    { $$ = new Division(@$); }
-  | '^'
-    { $$ = new Power(@$); }
-  | '%'
-    { $$ = new Modulus(@$); }
+  : '*'  { $$ = new Multiplication(@$); }
+  | '/'  { $$ = new Division(@$); }
+  | '^'  { $$ = new Power(@$); }
+  | '%'  { $$ = new Modulus(@$); }
   ;
 
 multiplicative_expression
@@ -124,10 +115,8 @@ multiplicative_expression
   ;
 
 additive_operator
-  : '+'
-    { $$ = new Plus(@$); }
-  | '-'
-    { $$ = new Minus(@$); }
+  : '+'  { $$ = new Plus(@$); }
+  | '-'  { $$ = new Minus(@$); }
   ;
 
 additive_expression
@@ -139,10 +128,8 @@ additive_expression
   ;
 
 shift_operator
-  : '<<'
-    { $$ = new LeftShift(@$); }
-  | '>>'
-    { $$ = new RightShift(@$); }
+  : '<<' { $$ = new LeftShift(@$); }
+  | '>>' { $$ = new RightShift(@$); }
   ;
 
 shift_expression
@@ -154,14 +141,10 @@ shift_expression
   ;
 
 relational_operator
-  : '<'
-    { $$ = new LessThan(@$); }
-  | '>'
-    { $$ = new GreaterThan(@$); }
-  | '<='
-    { $$ = new LessThanOrEqual(@$); }
-  | '>='
-    { $$ = new GreaterThanOrEqual(@$); }
+  : '<'  { $$ = new LessThan(@$); }
+  | '>'  { $$ = new GreaterThan(@$); }
+  | '<=' { $$ = new LessThanOrEqual(@$); }
+  | '>=' { $$ = new GreaterThanOrEqual(@$); }
   ;
 
 relational_expression
@@ -173,10 +156,8 @@ relational_expression
   ;
 
 equality_operator
-  : '=='
-    { $$ = new Equal(@$); }
-  | '!='
-    { $$ = new NotEqual(@$); }
+  : '==' { $$ = new Equal(@$); }
+  | '!=' { $$ = new NotEqual(@$); }
   ;
 
 equality_expression
@@ -247,14 +228,10 @@ labeled_statement
   ;
 
 compound_assignment_operator
-  : '+='
-    { $$ = new Plus(@$); }
-  | '-='
-    { $$ = new Minus(@$); }
-  | '*='
-    { $$ = new Multiplication(@$); }
-  | '/='
-    { $$ = new Division(@$); }
+  : '+=' { $$ = new Plus(@$); }
+  | '-=' { $$ = new Minus(@$); }
+  | '*=' { $$ = new Multiplication(@$); }
+  | '/=' { $$ = new Division(@$); }
   ;
 
 array_declarator
@@ -372,7 +349,6 @@ goto_statement
     }
   | GOTO error NEWLINE
     {
-      $$ = $1;
       parser.addError({
         severity: 'error',
         location: {
@@ -394,7 +370,6 @@ then_statement
     }
   | THEN error NEWLINE
     {
-      $$ = $1;
       parser.addError({
         severity: 'error',
         location: {
@@ -489,7 +464,8 @@ statement
     }
   | error
     {
-      $$ = $1;
+      yyclearin;
+      yyerrok;
       parser.addError({
         severity: 'error',
         location: {
