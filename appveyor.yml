@@ -2,8 +2,9 @@
 
 environment:
   matrix:
-    - nodejs_version: "Stable"
-    - nodejs_version: "LTS"
+    - nodejs_version: Stable
+    - nodejs_version: LTS
+    - nodejs_version: '6'
 
 install:
   # Install Node.js.
