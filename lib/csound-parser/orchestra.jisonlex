@@ -3,8 +3,6 @@
 // power-of-2 expanders (@ or @@ followed by digits), line continuations, or
 // comments. Also, all line endings must be line feeds (\n, U+000A).
 
-// These patterns need to be kept synchronized with skipWhitespaceAndNewline and
-// the check for whitespace after a void opcode (an opcode with no outputs).
 whitespace [ \t]+
 optional_whitespace [ \t]*
 
@@ -16,6 +14,8 @@ exponent_indicator [Ee]
 exponent {exponent_indicator}{signed_integer}
 decimal_number \d+\.?\d*{exponent}?|\.\d+{exponent}?
 hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
+
+%x optional_whitespace_and_newline
 
 %x after_instr_keyword
 %x after_instrument_number_or_identifier
@@ -35,6 +35,8 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %%
 
 \n return 'NEWLINE';
+
+<optional_whitespace_and_newline>{optional_whitespace}\n? this.popState();
 
 // Statements like
 //   void_opcode(input)
@@ -57,44 +59,44 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 // by whitespace and a newline, but the whitespace and newline is considered
 // part of the punctuation token. This throws off error reporting, so skip the
 // whitespace and newline.
-"("  this.skipWhitespaceAndNewline(); return '(';
-")"                                   return ')';
-"["  this.skipWhitespaceAndNewline(); return '[';
-"]"                                   return ']';
-"+"  this.skipWhitespaceAndNewline(); return '+';
-"-"  this.skipWhitespaceAndNewline(); return '-';
-"*"  this.skipWhitespaceAndNewline(); return '*';
-"/"  this.skipWhitespaceAndNewline(); return '/';
-"%"  this.skipWhitespaceAndNewline(); return '%';
-"^"  this.skipWhitespaceAndNewline(); return '^';
-"?"  this.skipWhitespaceAndNewline(); return '?';
-":"                                   return ':';
-","  this.skipWhitespaceAndNewline(); return ',';
-"!"  this.skipWhitespaceAndNewline(); return '!';
+"("  this.begin('optional_whitespace_and_newline'); return '(';
+")"                                                 return ')';
+"["  this.begin('optional_whitespace_and_newline'); return '[';
+"]"                                                 return ']';
+"+"  this.begin('optional_whitespace_and_newline'); return '+';
+"-"  this.begin('optional_whitespace_and_newline'); return '-';
+"*"  this.begin('optional_whitespace_and_newline'); return '*';
+"/"  this.begin('optional_whitespace_and_newline'); return '/';
+"%"  this.begin('optional_whitespace_and_newline'); return '%';
+"^"  this.begin('optional_whitespace_and_newline'); return '^';
+"?"  this.begin('optional_whitespace_and_newline'); return '?';
+":"                                                 return ':';
+","  this.begin('optional_whitespace_and_newline'); return ',';
+"!"  this.begin('optional_whitespace_and_newline'); return '!';
 
 // The -> operator is called S_ELIPSIS
 // <https://github.com/csound/csound/search?q=S_ELIPSIS+path%3AEngine+filename%3Acsound_orc.lex>.
 // It appears to be undocumented.
-"->"                                  return '->';
+"->"                                                return '->';
 
-"!=" this.skipWhitespaceAndNewline(); return '!=';
-"&&" this.skipWhitespaceAndNewline(); return '&&';
-"||" this.skipWhitespaceAndNewline(); return '||';
-"<<" this.skipWhitespaceAndNewline(); return '<<';
-">>" this.skipWhitespaceAndNewline(); return '>>';
-"<"  this.skipWhitespaceAndNewline(); return '<';
-"<=" this.skipWhitespaceAndNewline(); return '<=';
-"==" this.skipWhitespaceAndNewline(); return '==';
-"+=" this.skipWhitespaceAndNewline(); return '+=';
-"-=" this.skipWhitespaceAndNewline(); return '-=';
-"*=" this.skipWhitespaceAndNewline(); return '*=';
-"/=" this.skipWhitespaceAndNewline(); return '/=';
-"="  this.skipWhitespaceAndNewline(); return '=';
-">"  this.skipWhitespaceAndNewline(); return '>';
-">=" this.skipWhitespaceAndNewline(); return '>=';
-"|"  this.skipWhitespaceAndNewline(); return '|';
-"&"  this.skipWhitespaceAndNewline(); return '&';
-"#"  this.skipWhitespaceAndNewline(); return '#';
+"!=" this.begin('optional_whitespace_and_newline'); return '!=';
+"&&" this.begin('optional_whitespace_and_newline'); return '&&';
+"||" this.begin('optional_whitespace_and_newline'); return '||';
+"<<" this.begin('optional_whitespace_and_newline'); return '<<';
+">>" this.begin('optional_whitespace_and_newline'); return '>>';
+"<"  this.begin('optional_whitespace_and_newline'); return '<';
+"<=" this.begin('optional_whitespace_and_newline'); return '<=';
+"==" this.begin('optional_whitespace_and_newline'); return '==';
+"+=" this.begin('optional_whitespace_and_newline'); return '+=';
+"-=" this.begin('optional_whitespace_and_newline'); return '-=';
+"*=" this.begin('optional_whitespace_and_newline'); return '*=';
+"/=" this.begin('optional_whitespace_and_newline'); return '/=';
+"="  this.begin('optional_whitespace_and_newline'); return '=';
+">"  this.begin('optional_whitespace_and_newline'); return '>';
+">=" this.begin('optional_whitespace_and_newline'); return '>=';
+"|"  this.begin('optional_whitespace_and_newline'); return '|';
+"&"  this.begin('optional_whitespace_and_newline'); return '&';
+"#"  this.begin('optional_whitespace_and_newline'); return '#';
 
 // For backward compatibility with ISO/IEC 8859-1
 // <https://en.wikipedia.org/wiki/ISO/IEC_8859-1> encoded files, the Csound
@@ -103,7 +105,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 // (UTF-8 encodes ¬ as the 2-byte sequence C2 A2, and ISO/IEC 8859-1 encodes ¬
 // as the single byte A2.) Strings in JavaScript are always Unicode, so just use
 // a literal ¬.
-[~¬] this.skipWhitespaceAndNewline(); return '~';
+[~¬] this.begin('optional_whitespace_and_newline'); return '~';
 
 "if"       return 'IF';
 "then"     return 'THEN';
@@ -214,7 +216,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %{
   this.popState();
   this.begin('after_instr_keyword');
-  this.skipWhitespaceAndNewline();
+  this.begin('optional_whitespace_and_newline');
   return ',';
 %}
 <after_instrument_number_or_identifier>\n
@@ -279,7 +281,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %{
   this.popState();
   this.begin('before_opcode_output_type_signature');
-  this.skipWhitespaceAndNewline();
+  this.begin('optional_whitespace_and_newline');
   return ',';
 %}
 <after_opcode_name>[^,]
@@ -316,7 +318,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %{
   this.popState();
   this.begin('before_opcode_input_type_signature');
-  this.skipWhitespaceAndNewline();
+  this.begin('optional_whitespace_and_newline');
   return ',';
 %}
 <after_opcode_output_type_signature>[^,]
@@ -416,20 +418,20 @@ lexer.nameFromLabel = label => label.trim().replace(/:$/, '');
 
 lexer.quote = string => `‘${string}’`;
 
-lexer.rangeFromLocation = (function(yylloc) {
+lexer.rangeFromLocation = function(yylloc) {
   return [
     this.sourceMap.sourceLocation([yylloc.first_line - 1, yylloc.first_column]),
     this.sourceMap.sourceLocation([yylloc.last_line - 1, yylloc.last_column])
   ];
-}).bind(lexer);
+};
 
-lexer.rangeFromPosition = (function(line, column) {
+lexer.rangeFromPosition = function(line, column) {
   const location = this.sourceMap.sourceLocation([line - 1, column]);
   return [location, location];
-}).bind(lexer);
+};
 
 const original_setInput = lexer.setInput;
-lexer.setInput = (function(input, yy) {
+lexer.setInput = function(input, yy) {
   if (yy && !yy.parser)
     return;
 
@@ -443,18 +445,7 @@ lexer.setInput = (function(input, yy) {
   if (input.charAt(input.length - 1) !== '\n')
     input += '\n';
   return original_setInput.apply(this, [input, yy]);
-}).bind(lexer);
-
-lexer.skipWhitespaceAndNewline = (function() {
-  for (let character = this.input(); character !== null; character = this.input()) {
-    // This needs to be kept synchronized with the whitespace patterns.
-    if (character !== ' ' && character !== '\t') {
-      if (character !== '\n')
-        this.unput(character);
-      break;
-    }
-  }
-}).bind(lexer);
+};
 
 class CsoundLexerError extends Error {
   constructor(lintMessage) {

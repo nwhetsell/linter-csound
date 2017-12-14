@@ -926,23 +926,21 @@ endif "#end"(?:"if")?\b
 
 %%
 
-const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
 
-lexer.addNewline = (function() {
+lexer.addNewline = function() {
   this.appendToCurrentTextNode('\n');
   this.generatedLineCount++;
   this.generatedColumnCount = 0;
-}).bind(lexer);
+};
 
-lexer.addText = (function(text) {
+lexer.addText = function(text) {
   this.appendToCurrentTextNode(text);
   this.generatedColumnCount += text.length;
-}).bind(lexer);
+};
 
-lexer.appendToCurrentTextNode = (function(text) {
+lexer.appendToCurrentTextNode = function(text) {
   this.sourceMap.add(
     [this.yylloc.first_line - 1, this.yylloc.first_column],
     [this.generatedLineCount, this.generatedColumnCount]
@@ -953,9 +951,9 @@ lexer.appendToCurrentTextNode = (function(text) {
     this.currentTextNode = new CsoundPreprocessorTextNode(text);
     this.rootElement.childNodes.push(this.currentTextNode);
   }
-}).bind(lexer);
+};
 
-lexer.expandMacro = (function(YY_START) {
+lexer.expandMacro = function(YY_START) {
   const macrosByName = this.macroUse.macrosByName;
   const macro = this.macroUse.macro;
   if (macro.parameterNames && Object.keys(macrosByName).length < macro.parameterNames.length) {
@@ -1010,9 +1008,9 @@ lexer.expandMacro = (function(YY_START) {
       excerpt: `${this.quote(macro.name)} macro expanded in string`
     });
   }
-}).bind(lexer);
+};
 
-lexer.getMacro = (function(macroName) {
+lexer.getMacro = function(macroName) {
   const macro = this.macrosByName[macroName];
   if (!macro) {
     throw new CsoundPreprocessorError({
@@ -1025,14 +1023,14 @@ lexer.getMacro = (function(macroName) {
     });
   }
   return macro;
-}).bind(lexer);
+};
 
-lexer.getOutput = (function() {
+lexer.getOutput = function() {
   return this.rootElement.getOutput();
-}).bind(lexer);
+};
 
 const original_lex = lexer.lex;
-lexer.lex = (function() {
+lexer.lex = function() {
   const token = original_lex.apply(this, arguments);
   if (this.done) {
     this.sourceMap.add(
@@ -1041,20 +1039,22 @@ lexer.lex = (function() {
     );
   }
   return token;
-}).bind(lexer);
+};
 
-lexer.makePreprocessor = (function(input) {
+lexer.makePreprocessor = function(input) {
   // A function like yy_scan_string is unavailable in Jison Lex.
-  const preprocessor = vm.runInThisContext(this.code)(require);
-  assert.notStrictEqual(preprocessor, this);
-  preprocessor.code = this.code;
+  function Preprocessor() {
+    this.yy = {};
+  }
+  Preprocessor.prototype = this;
+  const preprocessor = new Preprocessor();
   preprocessor.includeDirectories = this.includeDirectories;
   preprocessor.isScorePreprocessor = this.isScorePreprocessor;
   preprocessor.setInput(input);
   preprocessor.currentDirectories = this.currentDirectories;
   Object.assign(preprocessor.macrosByName, this.macrosByName);
   return preprocessor;
-}).bind(lexer);
+};
 
 lexer.maximumExpansionDepth = 100;
 
@@ -1075,7 +1075,7 @@ lexer.rangeFromPosition = (line, column) => {
 };
 
 const original_setInput = lexer.setInput;
-lexer.setInput = (function(input, yy) {
+lexer.setInput = function(input, yy) {
   // This is an array because Atom::Project::getPaths
   // <https://atom.io/docs/api/latest/Project#instance-getPaths> returns an
   // array.
@@ -1107,7 +1107,7 @@ lexer.setInput = (function(input, yy) {
   this.sourceMap = new SourceMap();
   this.startRanges = [];
   return original_setInput.apply(this, arguments);
-}).bind(lexer);
+};
 
 class CsoundPreprocessorTextNode {
   constructor(text) {

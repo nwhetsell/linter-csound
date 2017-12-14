@@ -205,10 +205,10 @@ newline \n|\r\n?
 
 %%
 
-lexer.appendToString = (function(text) {
+lexer.appendToString = function(text) {
   if (this.stringName)
     this[this.stringName] += text;
-}).bind(lexer);
+};
 
 lexer.rangeFromLocation = yylloc => {
   return [
@@ -218,7 +218,7 @@ lexer.rangeFromLocation = yylloc => {
 };
 
 const original_setInput = lexer.setInput;
-lexer.setInput = (function(input, yy) {
+lexer.setInput = function(input, yy) {
   this.messages = [];
   this.orchestra = '';
   this.orchestraElementRange = null;
@@ -228,7 +228,7 @@ lexer.setInput = (function(input, yy) {
   this.stringName = null;
   this.synthesizerElementName = null;
   return original_setInput.apply(this, arguments);
-}).bind(lexer);
+};
 
 class CsoundDocumentProcessorError extends Error {
   constructor(lintMessage) {

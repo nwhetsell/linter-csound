@@ -44,10 +44,10 @@ primary_expression
     }
   | error
     {
-      parser.addError({
+      yy.addError({
         severity: 'error',
         location: {
-          position: parser.lexer.rangeFromPosition(@$.first_line, @$.first_column)
+          position: yy.lexer.rangeFromPosition(@$.first_line, @$.first_column)
         },
         excerpt: 'Expected expression'
       });
@@ -349,10 +349,10 @@ goto_statement
     }
   | GOTO error NEWLINE
     {
-      parser.addError({
+      yy.addError({
         severity: 'error',
         location: {
-          position: parser.lexer.rangeFromPosition(@GOTO.last_line, @GOTO.last_column)
+          position: yy.lexer.rangeFromPosition(@GOTO.last_line, @GOTO.last_column)
         },
         excerpt: 'Expected newline'
       });
@@ -370,10 +370,12 @@ then_statement
     }
   | THEN error NEWLINE
     {
-      parser.addError({
+      yyclearin;
+      yyerrok;
+      yy.addError({
         severity: 'error',
         location: {
-          position: parser.lexer.rangeFromPosition(@THEN.last_line, @THEN.last_column)
+          position: yy.lexer.rangeFromPosition(@THEN.last_line, @THEN.last_column)
         },
         excerpt: 'Expected newline'
       });
@@ -466,10 +468,10 @@ statement
     {
       yyclearin;
       yyerrok;
-      parser.addError({
+      yy.addError({
         severity: 'error',
         location: {
-          position: parser.lexer.rangeFromPosition(@$.first_line, @$.first_column)
+          position: yy.lexer.rangeFromPosition(@$.first_line, @$.first_column)
         },
         excerpt: 'Invalid statement'
       });
@@ -578,7 +580,7 @@ orchestra
   : orchestra_statements
     {
       $$ = new Orchestra(@$, {children: $orchestra_statements});
-      $$.analyzeSemantics();
+      $$.analyzeSemantics(yy);
       return $$;
     }
   ;
@@ -650,16 +652,16 @@ class ASTNode {
     return type.charAt(0) === this.type.charAt(0) && (!arraySuffixPredicate || arraySuffixPredicate(this.type));
   }
 
-  analyzeSemantics() {
+  analyzeSemantics(yy) {
     if (this.children) {
       for (const child of this.children) {
         if (child.analyzeSemantics instanceof Function)
-          child.analyzeSemantics();
+          child.analyzeSemantics(yy);
       }
     }
   }
 
-  analyzeSemanticsOfInputArguments(inputArguments, inputTypeSignatures) {
+  analyzeSemanticsOfInputArguments(yy, inputArguments, inputTypeSignatures) {
     class OptionalInputArgumentAnalyzer {
       constructor(defaultValue, inputArgument) {
         this.defaultValue = defaultValue;
@@ -925,9 +927,16 @@ class ASTNode {
       if (lastOptionalInputArgumentIndex === inputArguments.length - 1)
         optionalInputArgumentAnalyzersByMatchedInputTypeSignatures[inputTypeSignature] = optionalInputArgumentAnalyzers;
     }
+
+    if (matchedInputTypeSignatures.length === 0) {
+      const error = this.makeTypeSemanticsError();
+      error.severity = 'error';
+      error.excerpt = `Input argument types do not match type signatures${error.excerpt}`;
+      yy.addError(error);
+    }
   }
 
-  analyzeSemanticsOfDeclarator(declarator) {
+  analyzeSemanticsOfDeclarator(yy, declarator) {
     let identifier;
     let arrayDimension = 0;
     if (declarator instanceof ArrayDeclarator) {
@@ -946,25 +955,25 @@ class ASTNode {
     let type;
 
     const name = identifier.string;
-    let variable = parser.lexer.globalSymbolTable.identifiers[name];
+    let variable = yy.lexer.globalSymbolTable.identifiers[name];
     if (variable) {
-      symbolTable = parser.lexer.globalSymbolTable;
+      symbolTable = yy.lexer.globalSymbolTable;
       type = variable.type;
     } else {
       const result = /^(g)?([afikSw])/.exec(name);
       if (result) {
-        symbolTable = result[1] ? parser.lexer.globalSymbolTable : parser.localSymbolTable;
+        symbolTable = result[1] ? yy.lexer.globalSymbolTable : yy.localSymbolTable;
         type = result[2];
         variable = symbolTable.identifiers[name];
       } else {
-        parser.addError({
+        yy.addError({
           severity: 'error',
           location: {
             position: identifier.range
           },
-          excerpt: `Variable name ${parser.lexer.quote(name)} does not begin with type characters`
+          excerpt: `Variable name ${yy.lexer.quote(name)} does not begin with type characters`
         });
-        symbolTable = parser.localSymbolTable;
+        symbolTable = yy.localSymbolTable;
       }
     }
 
@@ -980,7 +989,7 @@ class ASTNode {
           location: {
             position: identifier.range
           },
-          excerpt: `Redefinition of ${parser.lexer.quote(name)} with a different type`
+          excerpt: `Redefinition of ${yy.lexer.quote(name)} with a different type`
         };
         if (variable.range) {
           error.trace = [{
@@ -991,14 +1000,14 @@ class ASTNode {
             excerpt: 'Previous definition is here'
           }]
         }
-        parser.addError(error);
+        yy.addError(error);
       }
     } else {
       symbolTable.addVariable(name, type, identifier.range);
     }
   }
 
-  analyzeSemanticsOfOutputTypes(outputTypes) {
+  analyzeSemanticsOfOutputTypes(yy, outputTypes) {
     const matchedInputTypeSignatures = this[matchedInputTypeSignaturesSymbol];
     if (!matchedInputTypeSignatures)
       return;
@@ -1109,7 +1118,7 @@ class ASTNode {
       const error = this.makeTypeSemanticsError();
       error.severity = 'error';
       error.excerpt = `Output argument types do not match type signatures${error.excerpt}`;
-      parser.addError(error);
+      yy.addError(error);
       return;
     }
 
@@ -1117,14 +1126,14 @@ class ASTNode {
       const error = this.makeTypeSemanticsError();
       error.severity = 'warning';
       error.excerpt = `Input arguments match multiple type signatures${error.excerpt}`;
-      parser.addError(error);
+      yy.addError(error);
     }
 
     const optionalInputArgumentAnalyzers = this[optionalInputArgumentAnalyzersByMatchedInputTypeSignaturesSymbol][possibleInputTypeSignatures[0]];
     if (optionalInputArgumentAnalyzers) {
       for (const optionalInputArgumentAnalyzer of optionalInputArgumentAnalyzers) {
         if (optionalInputArgumentAnalyzer.analyze()) {
-          parser.messages.push({
+          yy.messages.push({
             severity: 'warning',
             location: {
               position: optionalInputArgumentAnalyzer.inputArgument.range
@@ -1149,10 +1158,10 @@ class ASTNode {
 }
 
 class Identifier extends ASTNode {
-  analyzeSemantics() {
-    let symbol = parser.localSymbolTable.identifiers[this.string];
+  analyzeSemantics(yy) {
+    let symbol = yy.localSymbolTable.identifiers[this.string];
     if (!symbol)
-      symbol = parser.lexer.globalSymbolTable.identifiers[this.string];
+      symbol = yy.lexer.globalSymbolTable.identifiers[this.string];
     if (symbol) {
       if (symbol.kind === 'variable')
         this.type = symbol.type;
@@ -1161,8 +1170,8 @@ class Identifier extends ASTNode {
       const result = /p(\d+)/.exec(this.string);
       if (result) {
         this.type = 'i'; // Csound uses a type of 'p' for p-fields.
-        if (parser.localSymbolTable === parser.lexer.globalSymbolTable || result[1] === '0') {
-          parser.messages.push({
+        if (yy.localSymbolTable === yy.lexer.globalSymbolTable || result[1] === '0') {
+          yy.messages.push({
             severity: 'warning',
             location: {
               position: this.range
@@ -1171,12 +1180,12 @@ class Identifier extends ASTNode {
           });
         }
       } else {
-        parser.addError({
+        yy.addError({
           severity: 'error',
           location: {
             position: this.range
           },
-          excerpt: `Use of undefined variable ${parser.lexer.quote(this.string)}`
+          excerpt: `Use of undefined variable ${yy.lexer.quote(this.string)}`
         });
       }
     }
@@ -1199,7 +1208,9 @@ class StringLiteral extends ASTNode {
   get type() { return 'S'; }
 }
 
-class ArrayMember extends ASTNode {}
+class ArrayMember extends ASTNode  {
+  get type() { return this.children[0].type.slice(0, -2); }
+}
 
 class OpcodeExpression extends ASTNode {
   get opcodeIdentifier() { return this.children[0]; }
@@ -1207,18 +1218,11 @@ class OpcodeExpression extends ASTNode {
   get inputTypeSignatures() { return this.opcode.inputTypeSignatures; }
   get outputTypeSignaturesByInputTypeSignature() { return this.opcode.outputTypeSignaturesByInputTypeSignature; }
 
-  analyzeSemantics() {
-    super.analyzeSemantics();
+  analyzeSemantics(yy) {
+    super.analyzeSemantics(yy);
 
-    if (this.children.length > 1) {
-      this.analyzeSemanticsOfInputArguments(this.children[1].children, this.inputTypeSignatures);
-      if (this[matchedInputTypeSignaturesSymbol].length === 0) {
-        const error = this.makeTypeSemanticsError();
-        error.severity = 'error';
-        error.excerpt = `Input argument types do not match type signatures${error.excerpt}`;
-        parser.addError(error);
-      }
-    }
+    if (this.children.length > 1)
+      this.analyzeSemanticsOfInputArguments(yy, this.children[1].children, this.inputTypeSignatures);
   }
 
   makeTypeSemanticsError() {
@@ -1234,8 +1238,8 @@ class OpcodeExpression extends ASTNode {
 class UnaryOperator extends ASTNode {
   get outputTypeSignaturesByInputTypeSignature() {
     return {
-      'i': 'i',
-      'k': 'k'
+      'i': ['i'],
+      'k': ['k']
     };
   }
   get inputTypeSignatures() { return Object.keys(this.outputTypeSignaturesByInputTypeSignature); }
@@ -1249,9 +1253,10 @@ class UnaryOperation extends ASTNode {
   get outputTypeSignaturesByInputTypeSignature() { return this.operator.outputTypeSignaturesByInputTypeSignature; }
   get inputTypeSignatures() { return this.operator.inputTypeSignatures; }
 
-  analyzeSemantics() {
-    super.analyzeSemantics();
-    this.analyzeSemanticsOfInputArguments([this.children[1]], this.inputTypeSignatures);
+  analyzeSemantics(yy) {
+    super.analyzeSemantics(yy);
+
+    this.analyzeSemanticsOfInputArguments(yy, [this.children[1]], this.inputTypeSignatures);
   }
 }
 
@@ -1264,11 +1269,11 @@ class BinaryOperator extends ASTNode {
 class ArithmeticOperator extends BinaryOperator {
   get outputTypeSignaturesByInputTypeSignature() {
     return {
-      'ii': 'i',
-      'kk': 'k',
-      'ka': 'a',
-      'ak': 'a',
-      'aa': 'a'
+      'ii': ['i'],
+      'kk': ['k'],
+      'ka': ['a'],
+      'ak': ['a'],
+      'aa': ['a']
     };
   }
 }
@@ -1288,8 +1293,8 @@ class RightShift extends ArithmeticOperator {}
 class RelationalOperator extends BinaryOperator {
   get outputTypeSignaturesByInputTypeSignature() {
     return {
-      'ii': 'b',
-      'kk': 'B'
+      'ii': ['b'],
+      'kk': ['B']
     };
   }
 }
@@ -1303,8 +1308,8 @@ class NotEqual extends RelationalOperator {}
 class LogicalOperator extends BinaryOperator {
   get outputTypeSignaturesByInputTypeSignature() {
     return {
-      'bb': 'b',
-      'BB': 'B'
+      'bb': ['b'],
+      'BB': ['B']
     };
   }
 }
@@ -1316,9 +1321,9 @@ class BinaryOperation extends ASTNode {
   get outputTypeSignaturesByInputTypeSignature() { return this.operator.outputTypeSignaturesByInputTypeSignature; }
   get inputTypeSignatures() { return this.operator.inputTypeSignatures; }
 
-  analyzeSemantics() {
-    super.analyzeSemantics();
-    this.analyzeSemanticsOfInputArguments([this.children[0], this.children[2]], this.inputTypeSignatures);
+  analyzeSemantics(yy) {
+    super.analyzeSemantics(yy);
+    this.analyzeSemanticsOfInputArguments(yy, [this.children[0], this.children[2]], this.inputTypeSignatures);
   }
 }
 
@@ -1330,27 +1335,27 @@ class TestAndBodyNode extends ASTNode {
 class ConditionalExpression extends TestAndBodyNode {
   get outputTypeSignaturesByInputTypeSignature() {
     return {
-      'bii': 'i',
-      'Bkk': 'k',
-      'Bxx': 'a',
-      'BSS': 'S'
+      'bii': ['i'],
+      'Bkk': ['k'],
+      'Bxx': ['a'],
+      'BSS': ['S']
     };
   }
   get inputTypeSignatures() { return Object.keys(this.outputTypeSignaturesByInputTypeSignature); }
 
-  analyzeSemantics() {
-    super.analyzeSemantics();
+  analyzeSemantics(yy) {
+    super.analyzeSemantics(yy);
 
-    this.analyzeSemanticsOfInputArguments([this.test], this.inputTypeSignatures);
-    if (!(this.test.canBeType('b') || this.test.canBeType('B'))) {
-      parser.messages.push({
-        severity: 'error',
-        location: {
-          position: this.test.range
-        },
-        excerpt: 'Condition of conditional expression is not a Boolean expression'
-      });
-    }
+    this.analyzeSemanticsOfInputArguments(yy, this.children, this.inputTypeSignatures);
+  }
+
+  makeTypeSemanticsError() {
+    return {
+      location: {
+        position: this.test.range
+      },
+      excerpt: `; condition of conditional expression is not a Boolean expression`
+    };
   }
 }
 
@@ -1369,38 +1374,37 @@ class Assignment extends ASTNode {
   get expression() { return this.children[1]; }
   get outputTypeSignaturesByInputTypeSignature() {
     return {
-      'S': 'S',
+      'S': ['S'],
 
-      // TODO: This is in
-      // https://github.com/csound/csound/search?q=strcpy_opcode_p+path%3AEngine+filename%3Aentry1.c,
-      // seemingly for assigning to a string variable from a p-field, but it
+      // TODO: An i-time output for an i-time input (see
+      // https://github.com/csound/csound/search?q=strcpy_opcode_p+path%3AEngine+filename%3Aentry1.c)
+      // is seemingly for assigning a p-field to a string variable, but it
       // permits statements like STest = 0dbfs.
-      'i': 'S',
+      'i': ['i', 'S'],
 
-      'i': 'i',
-      'k': 'k',
-      'a': 'a',
-      'k': 'a',
-      'a': 'k'
+      'k': ['k', 'a'],
+      'a': ['k', 'a'],
+
+      '.': ['.']
     };
   }
   get inputTypeSignatures() { return Object.keys(this.outputTypeSignaturesByInputTypeSignature); }
 
-  analyzeSemantics() {
-    this.analyzeSemanticsOfDeclarator(this.declarator);
+  analyzeSemantics(yy) {
+    this.analyzeSemanticsOfDeclarator(yy, this.declarator);
 
-    super.analyzeSemantics();
+    super.analyzeSemantics(yy);
 
-    this.analyzeSemanticsOfInputArguments([this.expression], this.inputTypeSignatures);
+    this.analyzeSemanticsOfInputArguments(yy, [this.expression], this.inputTypeSignatures);
   }
 }
 class CompoundAssignment extends ASTNode {}
 
 class InputArgumentList extends ASTNode {}
 class OutputArgumentList extends ASTNode {
-  analyzeSemantics() {
+  analyzeSemantics(yy) {
     for (const outputArgument of this.children) {
-      this.analyzeSemanticsOfDeclarator(outputArgument);
+      this.analyzeSemanticsOfDeclarator(yy, outputArgument);
     }
   }
 }
@@ -1410,39 +1414,39 @@ class VoidOpcodeStatement extends ASTNode {}
 class OpcodeStatement extends VoidOpcodeStatement {
   get opcodeExpression() { return this.children[1]; }
 
-  analyzeSemantics() {
-    super.analyzeSemantics();
+  analyzeSemantics(yy) {
+    super.analyzeSemantics(yy);
 
     const outputTypes = [];
     for (const declarator of this.children[0].children) {
       outputTypes.push(declarator.type);
     }
-    this.opcodeExpression.analyzeSemanticsOfOutputTypes(outputTypes);
+    this.opcodeExpression.analyzeSemanticsOfOutputTypes(yy, outputTypes);
   }
 }
 
 class Goto extends ASTNode {
   get label() { return this.children[0]; }
 
-  analyzeSemantics() {
-    if (!parser.localSymbolTable.labels[this.label.string]) {
-      parser.addError({
+  analyzeSemantics(yy) {
+    if (!yy.localSymbolTable.labels[this.label.string]) {
+      yy.addError({
         severity: 'error',
         location: {
           position: this.range
         },
-        excerpt: `Use of undefined label ${parser.lexer.quote(this.label.string)}`
+        excerpt: `Use of undefined label ${yy.lexer.quote(this.label.string)}`
       });
     }
   }
 }
 
 class If extends TestAndBodyNode {
-  analyzeSemantics() {
-    super.analyzeSemantics();
+  analyzeSemantics(yy) {
+    super.analyzeSemantics(yy);
 
     if (!(this.test.canBeType('b') || this.test.canBeType('B'))) {
-      parser.messages.push({
+      yy.addError({
         severity: 'error',
         location: {
           position: this.test.range
@@ -1456,11 +1460,11 @@ class Then extends ASTNode {}
 class Else extends ASTNode {}
 
 class While extends TestAndBodyNode {
-  analyzeSemantics() {
-    super.analyzeSemantics();
+  analyzeSemantics(yy) {
+    super.analyzeSemantics(yy);
 
     if (!(this.test.canBeType('b') || this.test.canBeType('B'))) {
-      parser.messages.push({
+      yy.addError({
         severity: 'error',
         location: {
           position: this.test.range
@@ -1471,11 +1475,11 @@ class While extends TestAndBodyNode {
   }
 }
 class Until extends TestAndBodyNode {
-  analyzeSemantics() {
-    super.analyzeSemantics();
+  analyzeSemantics(yy) {
+    super.analyzeSemantics(yy);
 
     if (!(this.test.canBeType('b') || this.test.canBeType('B'))) {
-      parser.messages.push({
+      yy.addError({
         severity: 'error',
         location: {
           position: this.test.range
@@ -1490,12 +1494,12 @@ class Do extends ASTNode {}
 class Empty extends ASTNode {}
 
 class InstrumentNumberAndNameList extends ASTNode {
-  analyzeSemantics() {
+  analyzeSemantics(yy) {
     for (const child of this.children) {
       const numberOrName = (child instanceof UnaryOperation) ? child.children[1] : child;
       const string = numberOrName.string;
       if (string === '0') {
-        parser.addError({
+        yy.addError({
           severity: 'error',
           location: {
             position: numberOrName.range
@@ -1505,9 +1509,9 @@ class InstrumentNumberAndNameList extends ASTNode {
         return;
       }
 
-      const previousNumberOrName = parser.instrumentNumbersAndNamesByString[string];
+      const previousNumberOrName = yy.instrumentNumbersAndNamesByString[string];
       if (previousNumberOrName) {
-        parser.addError({
+        yy.addError({
           severity: 'error',
           location: {
             position: numberOrName.range
@@ -1524,16 +1528,16 @@ class InstrumentNumberAndNameList extends ASTNode {
         return;
       }
 
-      parser.instrumentNumbersAndNamesByString[string] = numberOrName;
+      yy.instrumentNumbersAndNamesByString[string] = numberOrName;
     }
   }
 }
 
 class Instrument extends ASTNode {
-  analyzeSemantics() {
-    parser.symbolTables.push(new parser.lexer.SymbolTable());
-    super.analyzeSemantics();
-    parser.symbolTables.pop();
+  analyzeSemantics(yy) {
+    yy.symbolTables.push(new yy.lexer.SymbolTable());
+    super.analyzeSemantics(yy);
+    yy.symbolTables.pop();
   }
 }
 
@@ -1546,9 +1550,9 @@ class Opcode extends ASTNode {
 }
 
 class Orchestra extends ASTNode {
-  analyzeSemantics() {
-    parser.symbolTables = [parser.lexer.globalSymbolTable];
-    super.analyzeSemantics();
+  analyzeSemantics(yy) {
+    yy.symbolTables = [yy.lexer.globalSymbolTable];
+    super.analyzeSemantics(yy);
   }
 }
 
@@ -1617,28 +1621,36 @@ Object.assign(parser, {
   Orchestra: Orchestra
 });
 
-parser.addError = (function(error) {
-  this.messages.push(error);
-  if (this.messages.length === 10) {
-    this.parseError('', {}, this.JisonParserError, {
-      severity: 'error',
-      location: error.location,
-      excerpt: 'Too many errors emitted, stopping now'
-    });
-  }
-}).bind(parser);
+parser.pre_parse = function(yy) {
+  yy.addError = function(error) {
+    this.messages.push(error);
+    if (this.messages.length === 10) {
+      this.parser.parseError('', {}, this.parser.JisonParserError, {
+        severity: 'error',
+        location: error.location,
+        excerpt: 'Too many errors emitted, stopping now'
+      });
+    }
+  };
 
-parser.instrumentNumbersAndNamesByString = {};
+  yy.instrumentNumbersAndNamesByString = {};
 
-parser.messages = [];
+  yy.parser.messages = [];
 
-Object.defineProperties(parser, {
-  localSymbolTable: {
-    get: (function() {
-      return this.symbolTables[this.symbolTables.length - 1];
-    }).bind(parser)
-  }
-});
+  Object.defineProperties(yy, {
+    localSymbolTable: {
+      get: function() {
+        return this.symbolTables[this.symbolTables.length - 1];
+      }
+    },
+
+    messages: {
+      get: function() {
+        return this.parser.messages;
+      }
+    }
+  });
+};
 
 class CsoundParserError extends Error {
   constructor(lintMessage) {
@@ -1649,8 +1661,8 @@ class CsoundParserError extends Error {
 }
 
 const original_originalParseError = parser.originalParseError;
-parser.originalParseError = (function() {
+parser.originalParseError = function() {
   if (arguments.length > 3)
     throw new CsoundParserError(arguments[3]);
   original_originalParseError.apply(this, arguments);
-}).bind(parser);
+};

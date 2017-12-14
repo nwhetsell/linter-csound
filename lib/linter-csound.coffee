@@ -1,9 +1,10 @@
-csound = require('csound-api')
-fs = require('fs')
 path = require('path')
 {Range} = require('atom')
+
+documentProcessor = require(path.join(__dirname, 'csound-parser', 'document-processor.js')).lexer
+preprocessor = require(path.join(__dirname, 'csound-parser', 'preprocessor.js')).lexer
+CsoundOrchestraParser = require(path.join(__dirname, 'csound-parser', 'orchestra-parser.js')).Parser
 SymbolTable = require(path.join(__dirname, 'csound-parser', 'symbol-table.js'))
-vm = require('vm')
 
 module.exports =
 LinterCsound =
@@ -17,15 +18,6 @@ LinterCsound =
         type: 'string'
 
   provideLinter: () ->
-    documentProcessorFilename = 'document-processor.js'
-    documentProcessorCode = fs.readFileSync(path.join(__dirname, 'csound-parser', documentProcessorFilename), 'utf-8')
-
-    preprocessorFilename = 'preprocessor.js'
-    preprocessorCode = fs.readFileSync(path.join(__dirname, 'csound-parser', preprocessorFilename), 'utf-8')
-
-    parserFilename = 'orchestra-parser.js'
-    parserCode = fs.readFileSync(path.join(__dirname, 'csound-parser', parserFilename), 'utf-8')
-
     return {
       name: 'Csound'
       grammarScopes: ['source.csound', 'source.csound-document']
@@ -35,7 +27,6 @@ LinterCsound =
       lint: (editor) ->
         return new Promise((resolve, reject) ->
           if editor.getRootScopeDescriptor().getScopesArray()[0] is 'source.csound-document'
-            documentProcessor = vm.runInThisContext(documentProcessorCode, {filename: documentProcessorFilename})(require)
             documentProcessor.filePath = editor.getPath()
             documentProcessor.setInput(editor.getText())
             try
@@ -49,8 +40,6 @@ LinterCsound =
             orchestraString = editor.getText()
 
           # Preprocess the orchestra.
-          preprocessor = vm.runInThisContext(preprocessorCode, {filename: preprocessorFilename})(require)
-          preprocessor.code = preprocessorCode
           preprocessor.filePath = editor.getPath()
           preprocessor.includeDirectories = atom.config.get('linter-csound.includeDirectories')
           preprocessor.setInput(orchestraString)
@@ -66,7 +55,8 @@ LinterCsound =
               return resolve(preprocessor.messages)
 
           # Parse the orchestra.
-          parser = vm.runInThisContext(parserCode, {filename: parserFilename})(require)
+          parser = new CsoundOrchestraParser
+          parser.__lexer__ = parser.lexer
           parser.lexer.SymbolTable = SymbolTable
           parser.yy.pre_parse = (yy) -> yy.lexer.sourceMap = preprocessor.sourceMap
           try
