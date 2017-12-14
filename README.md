@@ -2,6 +2,7 @@
 
 [![Build status](https://travis-ci.org/nwhetsell/linter-csound.svg?branch=master)](https://travis-ci.org/nwhetsell/linter-csound)
 [![Build status](https://ci.appveyor.com/api/projects/status/1gh9yg7ss95xmng4?svg=true)](https://ci.appveyor.com/project/nwhetsell/linter-csound)
+[![Coverage status](https://coveralls.io/repos/github/nwhetsell/linter-csound/badge.svg?branch=master)](https://coveralls.io/github/nwhetsell/linter-csound?branch=master)
 [![apm](https://img.shields.io/apm/dm/linter-csound.svg)](https://atom.io/packages/linter-csound)
 
 This [Atom](https://atom.io/) package adds syntax checking for [Csound](https://csound.github.io/) orchestras.
