@@ -25,7 +25,7 @@
   },
   "devDependencies": {
     "dedent-js": "^1.0.1",
-    "jison": "https://github.com/GerHobbelt/jison/archive/0.6.1-200.tar.gz"
+    "jison": "https://github.com/GerHobbelt/jison/archive/0.6.1-212.tar.gz"
   },
   "packages-deps": [
     "linter"
