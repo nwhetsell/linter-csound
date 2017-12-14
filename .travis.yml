@@ -19,9 +19,12 @@ install:
   - npm install csound-api
 
 before_script:
-  - npm --global install jasmine
+  - npm --global install coveralls jasmine nyc
   - npm install dedent-js
   - cd lib/csound-parser
 
 script:
-  - jasmine
+  - nyc jasmine
+
+after_success:
+  - nyc report --reporter=text-lcov | coveralls
