@@ -20,8 +20,9 @@ install:
   - sudo make install
   - sudo ldconfig
   - cd ..
-  # Get csound-api dependencies.
+  # Get csound-api dependencies and install csound-api.
   - sudo apt-get install -y libboost-dev
+  - npm install csound-api
 
 before_script:
   - npm --global install coveralls jasmine nyc
