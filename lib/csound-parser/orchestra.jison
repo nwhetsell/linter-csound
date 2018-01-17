@@ -258,7 +258,7 @@ opcode_outputs
     }
   | opcode_outputs ',' declarator
     {
-      $$ = $1;
+      $$ = $opcode_outputs;
       $$.push($declarator);
     }
   ;
@@ -270,7 +270,7 @@ opcode_inputs
     }
   | opcode_inputs ',' conditional_expression
     {
-      $$ = $1;
+      $$ = $opcode_inputs;
       $$.push($conditional_expression);
     }
   ;
@@ -401,12 +401,12 @@ elseif
   : elseif_statement
   | elseif elseif_statement
     {
-      $$ = $1;
+      $$ = $elseif;
       $$.children.push(new Else(@elseif_statement, {children: [$elseif_statement]}));
     }
   | elseif else
     {
-      $$ = $1;
+      $$ = $elseif;
       $$.children.push($else);
     }
   ;
@@ -485,7 +485,7 @@ statements
     }
   | statements statement
     {
-      $$ = $1;
+      $$ = $statements;
       $$.push($statement);
     }
   ;
@@ -506,7 +506,7 @@ instrument_numbers_and_names
     }
   | instrument_numbers_and_names ',' instrument_number_or_name
     {
-      $$ = $1;
+      $$ = $instrument_numbers_and_names;
       $$.push($instrument_number_or_name);
     }
   ;
@@ -571,7 +571,7 @@ orchestra_statements
     }
   | orchestra_statements orchestra_statement
     {
-      $$ = $1;
+      $$ = $orchestra_statements;
       $$.push($orchestra_statement);
     }
   ;
