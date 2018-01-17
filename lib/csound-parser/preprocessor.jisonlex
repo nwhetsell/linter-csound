@@ -670,8 +670,8 @@ endif "#end"(?:"if")?\b
       if (path.isAbsolute(includeFilePath)) {
         paths.push(includeFilePath);
       } else {
-        // From https://csound.github.io/docs/manual/OrchDirFiles.html, first
-        // search the current directory, then the directory of the file being
+        // From http://csound.com/docs/manual/OrchDirFiles.html, first search
+        // the current directory, then the directory of the file being
         // preprocessed.
         paths.push(...this.currentDirectories);
         if (this.filePath)
