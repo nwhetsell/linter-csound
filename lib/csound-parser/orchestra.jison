@@ -888,7 +888,7 @@ class ASTNode {
             break;
           case '*': // any types
             countPredicate = count => true;
-            expectedTypes = ['i', 'k', 'a', 'S', 'f', 'w'];
+            expectedTypesList = [['i', 'k', 'a', 'S', 'f', 'w']];
             break;
         }
 
