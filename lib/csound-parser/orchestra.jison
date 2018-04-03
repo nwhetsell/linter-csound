@@ -349,6 +349,8 @@ goto_statement
     }
   | GOTO error NEWLINE
     {
+      yyclearin;
+      yyerrok;
       yy.addError({
         severity: 'error',
         location: {
