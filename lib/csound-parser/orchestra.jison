@@ -4,34 +4,26 @@
 
 identifier
   : IDENTIFIER
-    { $$ = new Identifier(@$, {string: $IDENTIFIER}); };
+    { $$ = new Identifier(@$, {string: $1}); };
 global_value_identifier
   : GLOBAL_VALUE_IDENTIFIER
-    { $$ = new Identifier(@$, {string: $GLOBAL_VALUE_IDENTIFIER}); };
+    { $$ = new Identifier(@$, {string: $1}); };
 opcode
   : OPCODE
-    { $$ = new Identifier(@$, {string: $OPCODE}); };
+    { $$ = new Identifier(@$, {string: $1}); };
 void_opcode
   : VOID_OPCODE
-    { $$ = new Identifier(@$, {string: $VOID_OPCODE}); };
+    { $$ = new Identifier(@$, {string: $1}); };
 
 decimal_integer
   : DECIMAL_INTEGER
-    {
-      $$ = new NumberLiteral(@$, {string: $DECIMAL_INTEGER});
-    }
-  ;
-
+    { $$ = new NumberLiteral(@$, {string: $1}); };
 constant
   : decimal_integer
   | NUMBER
-    {
-      $$ = new NumberLiteral(@$, {string: $NUMBER});
-    }
+    { $$ = new NumberLiteral(@$, {string: $1}); }
   | STRING
-    {
-      $$ = new StringLiteral(@$, {string: $STRING});
-    }
+    { $$ = new StringLiteral(@$, {string: $1}); }
   ;
 
 primary_expression
@@ -85,10 +77,10 @@ postfix_expression
   ;
 
 unary_operator
-  : '+'  { $$ = new UnaryPlus(@$); }
-  | '-'  { $$ = new UnaryMinus(@$); }
-  | '~'  { $$ = new BitwiseComplement(@$); }
-  | '!'  { $$ = new Not(@$); }
+  : '+'  { $$ = new UnaryPlus(@$, {string: $1}); }
+  | '-'  { $$ = new UnaryMinus(@$, {string: $1}); }
+  | '~'  { $$ = new BitwiseComplement(@$, {string: $1}); }
+  | '!'  { $$ = new Not(@$, {string: $1}); }
   ;
 
 unary_expression
@@ -100,10 +92,10 @@ unary_expression
   ;
 
 multiplicative_operator
-  : '*'  { $$ = new Multiplication(@$); }
-  | '/'  { $$ = new Division(@$); }
-  | '^'  { $$ = new Power(@$); }
-  | '%'  { $$ = new Modulus(@$); }
+  : '*'  { $$ = new Multiplication(@$, {string: $1}); }
+  | '/'  { $$ = new Division(@$, {string: $1}); }
+  | '^'  { $$ = new Power(@$, {string: $1}); }
+  | '%'  { $$ = new Modulus(@$, {string: $1}); }
   ;
 
 multiplicative_expression
@@ -115,8 +107,8 @@ multiplicative_expression
   ;
 
 additive_operator
-  : '+'  { $$ = new Plus(@$); }
-  | '-'  { $$ = new Minus(@$); }
+  : '+'  { $$ = new Plus(@$, {string: $1}); }
+  | '-'  { $$ = new Minus(@$, {string: $1}); }
   ;
 
 additive_expression
@@ -128,8 +120,8 @@ additive_expression
   ;
 
 shift_operator
-  : '<<' { $$ = new LeftShift(@$); }
-  | '>>' { $$ = new RightShift(@$); }
+  : '<<' { $$ = new LeftShift(@$, {string: $1}); }
+  | '>>' { $$ = new RightShift(@$, {string: $1}); }
   ;
 
 shift_expression
@@ -141,10 +133,10 @@ shift_expression
   ;
 
 relational_operator
-  : '<'  { $$ = new LessThan(@$); }
-  | '>'  { $$ = new GreaterThan(@$); }
-  | '<=' { $$ = new LessThanOrEqual(@$); }
-  | '>=' { $$ = new GreaterThanOrEqual(@$); }
+  : '<'  { $$ = new LessThan(@$, {string: $1}); }
+  | '>'  { $$ = new GreaterThan(@$, {string: $1}); }
+  | '<=' { $$ = new LessThanOrEqual(@$, {string: $1}); }
+  | '>=' { $$ = new GreaterThanOrEqual(@$, {string: $1}); }
   ;
 
 relational_expression
@@ -156,8 +148,8 @@ relational_expression
   ;
 
 equality_operator
-  : '==' { $$ = new Equal(@$); }
-  | '!=' { $$ = new NotEqual(@$); }
+  : '==' { $$ = new Equal(@$, {string: $1}); }
+  | '!=' { $$ = new NotEqual(@$, {string: $1}); }
   ;
 
 equality_expression
@@ -172,7 +164,7 @@ and_expression
   : equality_expression
   | and_expression '&'[AND] equality_expression
     {
-      $$ = new BinaryOperation(@$, {children: [$and_expression, new BitwiseAND(@AND), $equality_expression]});
+      $$ = new BinaryOperation(@$, {children: [$and_expression, new BitwiseAND(@AND, {string: $AND}), $equality_expression]});
     }
   ;
 
@@ -180,7 +172,7 @@ exclusive_or_expression
   : and_expression
   | exclusive_or_expression '#'[XOR] and_expression
     {
-      $$ = new BinaryOperation(@$, {children: [$exclusive_or_expression, new BitwiseXOR(@XOR), $and_expression]});
+      $$ = new BinaryOperation(@$, {children: [$exclusive_or_expression, new BitwiseXOR(@XOR, {string: $XOR}), $and_expression]});
     }
   ;
 
@@ -188,7 +180,7 @@ inclusive_or_expression
   : exclusive_or_expression
   | inclusive_or_expression '|'[OR] exclusive_or_expression
     {
-      $$ = new BinaryOperation(@$, {children: [$inclusive_or_expression, new BitwiseOR(@OR), $exclusive_or_expression]});
+      $$ = new BinaryOperation(@$, {children: [$inclusive_or_expression, new BitwiseOR(@OR, {string: $OR}), $exclusive_or_expression]});
     }
   ;
 
@@ -196,7 +188,7 @@ logical_and_expression
   : inclusive_or_expression
   | logical_and_expression '&&'[and] inclusive_or_expression
     {
-      $$ = new BinaryOperation(@$, {children: [$logical_and_expression, new And(@and), $inclusive_or_expression]});
+      $$ = new BinaryOperation(@$, {children: [$logical_and_expression, new And(@and, {string: $and}), $inclusive_or_expression]});
     }
   ;
 
@@ -204,7 +196,7 @@ logical_or_expression
   : logical_and_expression
   | logical_or_expression '||'[or] logical_and_expression
     {
-      $$ = new BinaryOperation(@$, {children: [$logical_or_expression, new Or(@or), $logical_and_expression]});
+      $$ = new BinaryOperation(@$, {children: [$logical_or_expression, new Or(@or, {string: $or}), $logical_and_expression]});
     }
   ;
 
@@ -414,21 +406,21 @@ elseif
   ;
 
 if_statement
-  : IF equality_expression goto_statement
+  : IF logical_or_expression goto_statement
     {
-      $$ = new If(@$, {children: [$equality_expression, $goto_statement]});
+      $$ = new If(@$, {children: [$logical_or_expression, $goto_statement]});
     }
-  | IF equality_expression then_statement ENDIF NEWLINE
+  | IF logical_or_expression then_statement ENDIF NEWLINE
     {
-      $$ = new If(@$, {children: [$equality_expression, $then_statement]});
+      $$ = new If(@$, {children: [$logical_or_expression, $then_statement]});
     }
-  | IF equality_expression then_statement else ENDIF NEWLINE
+  | IF logical_or_expression then_statement else ENDIF NEWLINE
     {
-      $$ = new If(@$, {children: [$equality_expression, $then_statement, $else]});
+      $$ = new If(@$, {children: [$logical_or_expression, $then_statement, $else]});
     }
-  | IF equality_expression then_statement elseif ENDIF NEWLINE
+  | IF logical_or_expression then_statement elseif ENDIF NEWLINE
     {
-      $$ = new If(@$, {children: [$equality_expression, $then_statement, new Else(@elseif, {children: [$elseif]})]});
+      $$ = new If(@$, {children: [$logical_or_expression, $then_statement, new Else(@elseif, {children: [$elseif]})]});
     }
   ;
 
@@ -604,6 +596,10 @@ class ASTNode {
     }
     Object.assign(this, properties);
   }
+
+  get errorLocation () { return {position: this.range}; }
+  get description() { return 'expression'; }
+  get inputArgumentDescription() { return 'input arguments'; }
 
   canBeType(type, arraySuffixPredicate) {
     // Expressions will have matchedInputTypeSignatures defined.
@@ -931,10 +927,11 @@ class ASTNode {
     }
 
     if (matchedInputTypeSignatures.length === 0) {
-      const error = this.makeTypeSemanticsError();
-      error.severity = 'error';
-      error.excerpt = `Input argument types do not match type signatures${error.excerpt}`;
-      yy.addError(error);
+      yy.addError({
+        severity: 'error',
+        location: this.errorLocation,
+        excerpt: `Types of ${this.inputArgumentDescription} do not match type signatures of ${this.description}`
+      });
     }
   }
 
@@ -1117,18 +1114,20 @@ class ASTNode {
     }
 
     if (possibleInputTypeSignatures.length === 0) {
-      const error = this.makeTypeSemanticsError();
-      error.severity = 'error';
-      error.excerpt = `Output argument types do not match type signatures${error.excerpt}`;
-      yy.addError(error);
+      yy.addError({
+        severity: 'error',
+        location: this.errorLocation,
+        excerpt: `Types of output arguments do not match type signatures of ${this.description}`
+      });
       return;
     }
 
     if (possibleInputTypeSignatures.length > 1) {
-      const error = this.makeTypeSemanticsError();
-      error.severity = 'warning';
-      error.excerpt = `Input arguments match multiple type signatures${error.excerpt}`;
-      yy.addError(error);
+      yy.addError({
+        severity: 'warning',
+        location: this.errorLocation,
+        excerpt: `Types of ${this.inputArgumentDescription} match multiple type signatures of ${this.description}`
+      });
     }
 
     const optionalInputArgumentAnalyzers = this[optionalInputArgumentAnalyzersByMatchedInputTypeSignaturesSymbol][possibleInputTypeSignatures[0]];
@@ -1147,15 +1146,6 @@ class ASTNode {
         }
       }
     }
-  }
-
-  makeTypeSemanticsError() {
-    return {
-      location: {
-        position: this.range
-      },
-      excerpt: ''
-    };
   }
 }
 
@@ -1220,20 +1210,14 @@ class OpcodeExpression extends ASTNode {
   get inputTypeSignatures() { return this.opcode.inputTypeSignatures; }
   get outputTypeSignaturesByInputTypeSignature() { return this.opcode.outputTypeSignaturesByInputTypeSignature; }
 
+  get errorLocation () { return {position: this.opcodeIdentifier.range}; }
+  get description() { return `opcode ${parser.lexer.quote(this.opcodeIdentifier.string)}`; }
+
   analyzeSemantics(yy) {
     super.analyzeSemantics(yy);
 
     if (this.children.length > 1)
       this.analyzeSemanticsOfInputArguments(yy, this.children[1].children, this.inputTypeSignatures);
-  }
-
-  makeTypeSemanticsError() {
-    return {
-      location: {
-        position: this.opcodeIdentifier.range
-      },
-      excerpt: ` of opcode ${parser.lexer.quote(this.opcodeIdentifier.string)}`
-    };
   }
 }
 
@@ -1323,8 +1307,12 @@ class BinaryOperation extends ASTNode {
   get outputTypeSignaturesByInputTypeSignature() { return this.operator.outputTypeSignaturesByInputTypeSignature; }
   get inputTypeSignatures() { return this.operator.inputTypeSignatures; }
 
+  get description() { return `operator ${this.operator.string}`; }
+  get inputArgumentDescription () { return 'operands'; }
+
   analyzeSemantics(yy) {
     super.analyzeSemantics(yy);
+
     this.analyzeSemanticsOfInputArguments(yy, [this.children[0], this.children[2]], this.inputTypeSignatures);
   }
 }
@@ -1345,19 +1333,13 @@ class ConditionalExpression extends TestAndBodyNode {
   }
   get inputTypeSignatures() { return Object.keys(this.outputTypeSignaturesByInputTypeSignature); }
 
+  get description() { return 'conditional expression'; }
+  get inputArgumentDescription () { return 'operands'; }
+
   analyzeSemantics(yy) {
     super.analyzeSemantics(yy);
 
     this.analyzeSemanticsOfInputArguments(yy, this.children, this.inputTypeSignatures);
-  }
-
-  makeTypeSemanticsError() {
-    return {
-      location: {
-        position: this.test.range
-      },
-      excerpt: `; condition of conditional expression is not a Boolean expression`
-    };
   }
 }
 
@@ -1629,7 +1611,9 @@ parser.pre_parse = function(yy) {
     if (this.messages.length === 10) {
       this.parser.parseError('', {}, this.parser.JisonParserError, {
         severity: 'error',
-        location: error.location,
+        location: {
+          position: error.location
+        },
         excerpt: 'Too many errors emitted, stopping now'
       });
     }
