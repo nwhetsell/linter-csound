@@ -1234,6 +1234,15 @@ class UnaryPlus extends UnaryOperator {}
 class UnaryMinus extends UnaryOperator {}
 class BitwiseComplement extends UnaryOperator {}
 
+class Not extends UnaryOperator {
+  get outputTypeSignaturesByInputTypeSignature() {
+    return {
+      'b': ['b'],
+      'B': ['B']
+    };
+  }
+}
+
 class UnaryOperation extends ASTNode {
   get operator() { return this.children[0]; }
   get outputTypeSignaturesByInputTypeSignature() { return this.operator.outputTypeSignaturesByInputTypeSignature; }
@@ -1245,8 +1254,6 @@ class UnaryOperation extends ASTNode {
     this.analyzeSemanticsOfInputArguments(yy, [this.children[1]], this.inputTypeSignatures);
   }
 }
-
-class Not extends ASTNode {}
 
 class BinaryOperator extends ASTNode {
   get inputTypeSignatures() { return Object.keys(this.outputTypeSignaturesByInputTypeSignature); }
