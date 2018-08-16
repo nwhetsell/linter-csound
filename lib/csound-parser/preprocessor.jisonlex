@@ -851,7 +851,7 @@ endif "#end"(?:"if")?\b
 
 <score_loop_after_repeat_count>{identifier}
 %{
-  this.macro.repititionMacro = {name: yytext};
+  this.macro.repetitionMacro = {name: yytext};
   this.popState();
   this.begin('score_loop_after_repetition_macro_name');
 %}
@@ -890,12 +890,12 @@ endif "#end"(?:"if")?\b
 %}
 <score_loop>"}"
 %{
-  const repititionMacro = this.macro.repititionMacro;
-  for (let repitition = 1; repitition <= this.macro.repeatCount; repitition++) {
+  const repetitionMacro = this.macro.repetitionMacro;
+  for (let repetition = 1; repetition <= this.macro.repeatCount; repetition++) {
     this.macroUse = new MacroUseElement(this.macro, this.rangeFromLocation(yylloc));
-    if (repititionMacro) {
-      repititionMacro.body = repitition.toString();
-      this.macroUse.macrosByName[repititionMacro.name] = repititionMacro;
+    if (repetitionMacro) {
+      repetitionMacro.body = repetition.toString();
+      this.macroUse.macrosByName[repetitionMacro.name] = repetitionMacro;
     }
     this.expandMacro(YY_START);
   }
