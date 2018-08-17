@@ -670,7 +670,7 @@ endif "#end"(?:"if")?\b
       if (path.isAbsolute(includeFilePath)) {
         paths.push(includeFilePath);
       } else {
-        // From http://csound.com/docs/manual/OrchDirFiles.html, first search
+        // From https://csound.com/docs/manual/OrchDirFiles.html, first search
         // the current directory, then the directory of the file being
         // preprocessed.
         paths.push(...this.currentDirectories);
@@ -1143,8 +1143,9 @@ class MacroUseElement extends CsoundPreprocessorElement {
 }
 
 // The LineMap and SourceMap classes are based on code in CoffeeScript
-// <http://coffeescript.org/documentation/docs/sourcemap.html>, which is
-// MIT-licensed <https://github.com/jashkenas/coffeescript/blob/master/LICENSE>.
+// (https://github.com/jashkenas/coffeescript/blob/master/src/sourcemap.litcoffee),
+// which is MIT-licensed
+// (https://github.com/jashkenas/coffeescript/blob/master/LICENSE).
 
 class LineMap {
   constructor(line) {

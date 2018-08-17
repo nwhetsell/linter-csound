@@ -5,11 +5,11 @@
 [![Coverage status](https://coveralls.io/repos/github/nwhetsell/linter-csound/badge.svg?branch=master)](https://coveralls.io/github/nwhetsell/linter-csound?branch=master)
 [![apm](https://img.shields.io/apm/dm/linter-csound.svg)](https://atom.io/packages/linter-csound)
 
-This [Atom](https://atom.io/) package adds syntax checking for [Csound](http://csound.com/) orchestras.
+This [Atom](https://atom.io/) package adds syntax checking for [Csound](https://csound.com/) orchestras.
 
 ## Including Files
 
-The linter-csound preprocessor searches paths for files included using [`#include`](http://csound.com/docs/manual/include.html) in this order:
+The linter-csound preprocessor searches paths for files included using [`#include`](https://csound.com/docs/manual/include.html) in this order:
 
 1. The paths returned by [`Project::getPaths`](https://atom.io/docs/api/latest/Project#instance-getPaths). (This array usually contains one path that’s roughly equivalent to the current directory.)
 
@@ -67,4 +67,4 @@ Csound’s preprocessor:
 
 ### Known Differences from Csound’s Parser
 
-* Csound’s parser silently ignores duplicate [labels](http://csound.com/docs/manual/OrchTop.html), while linter-csound gives a warning.
+* Csound’s parser silently ignores duplicate [labels](https://csound.com/docs/manual/OrchTop.html), while linter-csound gives a warning.

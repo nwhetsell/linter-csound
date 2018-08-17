@@ -295,7 +295,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
   });
 %}
 
-// http://csound.com/docs/manual/opcode.html
+// https://csound.com/docs/manual/opcode.html
 <before_opcode_output_type_signature>"0"|(?:[aikftSK](?:\[\])*)+
 %{
   this.popState();
@@ -332,7 +332,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
   });
 %}
 
-// http://csound.com/docs/manual/opcode.html
+// https://csound.com/docs/manual/opcode.html
 <before_opcode_input_type_signature>"0"|(?:[aijkftKOJVPopS](?:\[\])*)+
 %{
   this.popState();
