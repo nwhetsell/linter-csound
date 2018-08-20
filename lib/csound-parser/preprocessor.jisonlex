@@ -993,7 +993,7 @@ lexer.expandMacro = function(YY_START) {
   } catch (error) {
     if (error.lintMessage)
       error.lintMessage.location.position = this.macroUse.range;
-    throw(error);
+    throw error;
   }
   this.macroUse.childNodes = preprocessor.rootElement.childNodes;
   this.rootElement.childNodes.push(this.macroUse);
