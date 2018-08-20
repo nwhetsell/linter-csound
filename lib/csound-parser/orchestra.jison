@@ -414,6 +414,18 @@ if_statement
     {
       $$ = new If(@$, {children: [$logical_or_expression, $then_statement]});
     }
+  | IF logical_or_expression error
+    {
+      yyclearin;
+      yyerrok;
+      yy.addError({
+        severity: 'error',
+        location: {
+          position: yy.lexer.rangeFromPosition(@IF.first_line, @IF.first_column)
+        },
+        excerpt: 'Invalid if-statement'
+      });
+    }
   | IF logical_or_expression then_statement else ENDIF NEWLINE
     {
       $$ = new If(@$, {children: [$logical_or_expression, $then_statement, $else]});
@@ -458,7 +470,7 @@ statement
     {
       $$ = new Empty(@$);
     }
-  | error
+  | error NEWLINE
     {
       yyclearin;
       yyerrok;
@@ -586,14 +598,7 @@ const optionalInputArgumentAnalyzersByMatchedInputTypeSignaturesSymbol = Symbol(
 
 class ASTNode {
   constructor(rangeOrLocation, properties) {
-    if (Array.isArray(rangeOrLocation)) {
-      this.range = rangeOrLocation;
-    } else {
-      this.range = [
-        parser.lexer.sourceMap.sourceLocation([rangeOrLocation.first_line - 1, rangeOrLocation.first_column]),
-        parser.lexer.sourceMap.sourceLocation([rangeOrLocation.last_line - 1, rangeOrLocation.last_column])
-      ];
-    }
+    this.range = Array.isArray(rangeOrLocation) ? rangeOrLocation : parser.lexer.rangeFromLocation(rangeOrLocation);
     Object.assign(this, properties);
   }
 
