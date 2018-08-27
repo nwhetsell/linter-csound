@@ -296,7 +296,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %}
 
 // https://csound.com/docs/manual/opcode.html
-<before_opcode_output_type_signature>"0"|(?:[aikftSK](?:\[\])*)+
+<before_opcode_output_type_signature>"0"|(?:[aikK](?:\[\])*)+
 %{
   this.popState();
   this.opcodeOutputTypeSignature = (yytext === '0') ? '' : yytext;
@@ -333,7 +333,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %}
 
 // https://csound.com/docs/manual/opcode.html
-<before_opcode_input_type_signature>"0"|(?:[aijkftKOJVPopS](?:\[\])*)+
+<before_opcode_input_type_signature>"0"|(?:[aijkOPVKopS](?:\[\])*)+
 %{
   this.popState();
   this.globalSymbolTable.addOpcode(this.opcodeName, {[(yytext === '0') ? '' : yytext]: [this.opcodeOutputTypeSignature]});

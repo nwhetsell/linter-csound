@@ -1543,6 +1543,12 @@ class Opcode extends ASTNode {
   get name() { return this.children[0]; }
   get outputTypes() { return this.children[1]; }
   get inputTypes() { return this.children[2]; }
+
+  analyzeSemantics(yy) {
+    yy.symbolTables.push(new yy.lexer.SymbolTable());
+    super.analyzeSemantics(yy);
+    yy.symbolTables.pop();
+  }
 }
 
 class Orchestra extends ASTNode {
