@@ -300,7 +300,20 @@ assignment_statement
   ;
 
 void_opcode_statement
-  : void_opcode WHITESPACE opcode_inputs NEWLINE
+  : void_opcode NEWLINE
+    {
+      $$ = new VoidOpcodeStatement(@$, {children: [
+        new OpcodeExpression({
+          first_line:   @void_opcode.first_line,
+          first_column: @void_opcode.first_column,
+          last_line:    @void_opcode.last_line,
+          last_column:  @void_opcode.last_column
+        }, {children: [
+          $void_opcode
+        ]})
+      ]});
+    }
+  | void_opcode WHITESPACE opcode_inputs NEWLINE
     {
       $$ = new VoidOpcodeStatement(@$, {children: [
         new OpcodeExpression({
