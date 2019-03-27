@@ -1025,6 +1025,9 @@ class ASTNode {
   }
 
   analyzeSemanticsOfOutputTypes(yy, outputTypes) {
+    if (!(outputTypes.length > 0))
+      return;
+
     const matchedInputTypeSignatures = this[matchedInputTypeSignaturesSymbol];
     if (!matchedInputTypeSignatures)
       return;
@@ -1428,7 +1431,8 @@ class OpcodeStatement extends VoidOpcodeStatement {
 
     const outputTypes = [];
     for (const declarator of this.children[0].children) {
-      outputTypes.push(declarator.type);
+      if (declarator.type)
+        outputTypes.push(declarator.type);
     }
     this.opcodeExpression.analyzeSemanticsOfOutputTypes(yy, outputTypes);
   }
