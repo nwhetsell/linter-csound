@@ -7,6 +7,7 @@ macro_use \${identifier}\.?
 // non-capturing groups so that Jison Lex doesn’t append word break patterns to
 // them. Also, #define is the only directive that allows whitespace after the #.
 include (?:"#include")
+includestr (?:"#includestr")
 define "#"[ \t]*(?:"define")
 undef (?:"#undef")
 ifdef_or_ifndef "#if""n"?(?:"def")
@@ -43,6 +44,8 @@ endif "#end"(?:"if")?\b
 %x else_false
 
 %x include_directive
+%x includestr_directive
+%x includestr_directive_quoted_string
 
 %x macro_parameter_value_list
 %x macro_parameter_value
@@ -61,7 +64,7 @@ endif "#end"(?:"if")?\b
 
 %%
 
-<INITIAL,quoted_string,macro_parameter_value_quoted_string>{line_continuation}
+<INITIAL,quoted_string,macro_parameter_value_quoted_string,includestr_directive_quoted_string>{line_continuation}
 %{
   this.currentTextNode = null;
   for (let i = yyleng - 1; i > 0; i--) {
@@ -146,7 +149,7 @@ endif "#end"(?:"if")?\b
   this.popState();
   this.addText(yytext);
 %}
-<quoted_string,macro_parameter_value_quoted_string>{newline}|<<EOF>>
+<quoted_string,macro_parameter_value_quoted_string,includestr_directive_quoted_string>{newline}|<<EOF>>
 %{
   this.messages.push({
     severity: 'error',
@@ -184,7 +187,7 @@ endif "#end"(?:"if")?\b
   });
 %}
 
-<INITIAL,quoted_string,macro_parameter_value_quoted_string>{macro_use}\(
+<INITIAL,quoted_string,macro_parameter_value_quoted_string,includestr_directive_quoted_string>{macro_use}\(
 %{
   let i = yyleng - 2;
   if (yytext.charAt(i) === '.') {
@@ -325,12 +328,10 @@ endif "#end"(?:"if")?\b
 <macro_parameter_value_parenthetical>\( this.macroParameterValue += yytext; this.begin(YY_START);
 <macro_parameter_value_parenthetical>\) this.macroParameterValue += yytext; this.popState();
 
-<macro_parameter_value,macro_parameter_value_quoted_string,macro_parameter_value_braced_string,macro_parameter_value_parenthetical>.|{newline}
-%{
-  this.macroParameterValue += yytext;
-%}
+<macro_parameter_value,macro_parameter_value_braced_string,macro_parameter_value_parenthetical>.|{newline} this.macroParameterValue += yytext;
+<macro_parameter_value_quoted_string>. this.macroParameterValue += yytext;
 
-<INITIAL,quoted_string,macro_parameter_value_quoted_string>{macro_use}
+<INITIAL,quoted_string,macro_parameter_value_quoted_string,includestr_directive_quoted_string>{macro_use}
 %{
   {
     let i = yyleng - 1;
@@ -629,6 +630,39 @@ endif "#end"(?:"if")?\b
   });
 %}
 
+{includestr}
+%{
+  this.begin('includestr_directive');
+  this.startRanges.push(this.rangeFromLocation(yylloc));
+%}
+<includestr_directive>[ \t] // Do nothing
+<includestr_directive>\"
+%{
+  this.begin('includestr_directive_quoted_string');
+  this.startRanges.push(this.rangeFromLocation(yylloc));
+  this.includestrFilePath = '';
+%}
+<includestr_directive>.
+%{
+  throw new CsoundPreprocessorError({
+    severity: 'error',
+    location: {
+      file: this.filePath,
+      position: this.rangeFromPosition(yylloc.first_line, yylloc.first_column)
+    },
+    excerpt: 'Expected double quote after #includestr'
+  });
+%}
+
+<includestr_directive_quoted_string>\"
+%{
+  const includestrFilePathStartRange = this.startRanges.pop();
+  this.popState();
+  this.popState();
+  this.includeFile(this.includestrFilePath, includestrFilePathStartRange);
+%}
+<includestr_directive_quoted_string>. this.includestrFilePath += yytext;
+
 {include}
 %{
   this.begin('include_directive');
@@ -638,18 +672,19 @@ endif "#end"(?:"if")?\b
 <include_directive>[^ \t]
 %{
   {
-    const includeRange = this.rangeFromPosition(yylloc.first_line, yylloc.first_column);
+    const includeFilePathStartRange = this.rangeFromPosition(yylloc.first_line, yylloc.first_column);
     const delimiter = yytext;
     if (delimiter !== '"') {
       this.messages.push({
         severity: 'warning',
         location: {
           file: this.filePath,
-          position: includeRange
+          position: includeFilePathStartRange
         },
         excerpt: `${this.quote(delimiter)} instead of ${this.quote('"')} used to enclose file path`
       });
     }
+    this.popState();
     let includeFilePath = '';
     for (let character = this.input(); character !== delimiter; character = this.input()) {
       if (character === '\n' || character === '\r' || !character) {
@@ -657,94 +692,18 @@ endif "#end"(?:"if")?\b
           severity: 'error',
           location: {
             file: this.filePath,
-            position: includeRange
+            position: includeFilePathStartRange
           },
           excerpt: `Missing terminating ${this.quote(delimiter)}`
         });
       }
       includeFilePath += character;
     }
-    this.popState();
-    if (includeFilePath.length > 0) {
-      let paths = [];
-      if (path.isAbsolute(includeFilePath)) {
-        paths.push(includeFilePath);
-      } else {
-        // From https://csound.com/docs/manual/OrchDirFiles.html, first search
-        // the current directory, then the directory of the file being
-        // preprocessed.
-        paths.push(...this.currentDirectories);
-        if (this.filePath)
-          paths.push(path.dirname(this.filePath));
-        // If there’s a file named .csound-include-directories in the current
-        // directory, assume it contains a list of directory paths, one per
-        // line, and also search those.
-        for (const directory of this.currentDirectories) {
-          const absolutePath = path.join(directory, '.csound-include-directories');
-          try {
-            const stats = fs.statSync(absolutePath);
-            if (stats && stats.isFile())
-              paths.push(...fs.readFileSync(absolutePath, 'utf8').trim().split(/\n|\r\n?/));
-          } catch (error) {
-            // Do nothing
-          }
-        }
-        // Finally, if this lexer has an includeDirectories property, search
-        // those.
-        if (this.includeDirectories)
-          paths.push(...this.includeDirectories);
-        paths = paths.map(directory => path.join(directory, includeFilePath));
-      }
-      for (const absolutePath of paths) {
-        let stats;
-        try {
-          stats = fs.statSync(absolutePath);
-        } catch (error) {
-          continue;
-        }
-        if (stats.isFile()) {
-          if (this.includeDepth === this.maximumIncludeDepth) {
-            throw new CsoundPreprocessorError({
-              severity: 'error',
-              location: {
-                file: this.filePath,
-                position: includeRange
-              },
-              excerpt: '#include nested too deeply'
-            });
-          }
-          const preprocessor = this.makePreprocessor(fs.readFileSync(absolutePath, 'utf8'));
-          preprocessor.filePath = absolutePath;
-          preprocessor.includeDepth = this.includeDepth + 1;
-          preprocessor.lex();
-          for (const childNode of preprocessor.rootElement.childNodes) {
-            this.rootElement.childNodes.push(childNode);
-          }
-          this.currentTextNode = null;
-          return;
-        }
-      }
-      throw new CsoundPreprocessorError({
-        severity: 'error',
-        location: {
-          file: this.filePath,
-          position: includeRange
-        },
-        excerpt: `${this.quote(includeFilePath)} file not found`
-      });
-    } else {
-      this.messages.push({
-        severity: 'warning',
-        location: {
-          file: this.filePath,
-          position: includeRange
-        },
-        excerpt: 'Empty file path'
-      });
-    }
+    this.includeFile(includeFilePath, includeFilePathStartRange);
   }
 %}
-<include_directive>{newline}|<<EOF>>
+
+<include_directive,includestr_directive>{newline}|<<EOF>>
 %{
   throw new CsoundPreprocessorError({
     severity: 'error',
@@ -1027,6 +986,85 @@ lexer.getMacro = function(macroName) {
 
 lexer.getOutput = function() {
   return this.rootElement.getOutput();
+};
+
+lexer.includeFile = function(includeFilePath, includeFilePathStartRange) {
+  if (includeFilePath.length > 0) {
+    let paths = [];
+    if (path.isAbsolute(includeFilePath)) {
+      paths.push(includeFilePath);
+    } else {
+      // From https://csound.com/docs/manual/OrchDirFiles.html, first search the
+      // current directory, then the directory of the file being preprocessed.
+      paths.push(...this.currentDirectories);
+      if (this.filePath)
+        paths.push(path.dirname(this.filePath));
+      // If there’s a file named .csound-include-directories in the current
+      // directory, assume it contains a list of directory paths, one per line,
+      // and also search those.
+      for (const directory of this.currentDirectories) {
+        const absolutePath = path.join(directory, '.csound-include-directories');
+        try {
+          const stats = fs.statSync(absolutePath);
+          if (stats && stats.isFile())
+            paths.push(...fs.readFileSync(absolutePath, 'utf8').trim().split(/\n|\r\n?/));
+        } catch (error) {
+          // Do nothing
+        }
+      }
+      // Finally, if this lexer has an includeDirectories property, search
+      // those.
+      if (this.includeDirectories)
+        paths.push(...this.includeDirectories);
+      paths = paths.map(directory => path.join(directory, includeFilePath));
+    }
+    for (const absolutePath of paths) {
+      let stats;
+      try {
+        stats = fs.statSync(absolutePath);
+      } catch (error) {
+        continue;
+      }
+      if (stats.isFile()) {
+        if (this.includeDepth === this.maximumIncludeDepth) {
+          throw new CsoundPreprocessorError({
+            severity: 'error',
+            location: {
+              file: this.filePath,
+              position: includeFilePathStartRange
+            },
+            excerpt: '#include or #includestr nested too deeply'
+          });
+        }
+        const preprocessor = this.makePreprocessor(fs.readFileSync(absolutePath, 'utf8'));
+        preprocessor.filePath = absolutePath;
+        preprocessor.includeDepth = this.includeDepth + 1;
+        preprocessor.lex();
+        for (const childNode of preprocessor.rootElement.childNodes) {
+          this.rootElement.childNodes.push(childNode);
+        }
+        this.currentTextNode = null;
+        return;
+      }
+    }
+    throw new CsoundPreprocessorError({
+      severity: 'error',
+      location: {
+        file: this.filePath,
+        position: includeFilePathStartRange
+      },
+      excerpt: `${this.quote(includeFilePath)} file not found`
+    });
+  } else {
+    this.messages.push({
+      severity: 'warning',
+      location: {
+        file: this.filePath,
+        position: includeFilePathStartRange
+      },
+      excerpt: 'Empty file path'
+    });
+  }
 };
 
 const original_lex = lexer.lex;
