@@ -282,9 +282,12 @@ opcode_expression
   ;
 
 assignment_statement
-  : declarator '=' conditional_expression NEWLINE
+  : opcode_outputs '=' opcode_inputs NEWLINE
     {
-      $$ = new Assignment(@$, {children: [$declarator, $conditional_expression]});
+      $$ = new Assignment(@$, {children: [
+        new OutputArgumentList(@opcode_outputs, {children: $opcode_outputs}),
+        new InputArgumentList(@opcode_inputs, {children: $opcode_inputs})
+      ]});
     }
   | identifier compound_assignment_operator conditional_expression NEWLINE
     {
@@ -576,7 +579,10 @@ opcode_definition
 orchestra_statement
   : global_value_identifier '=' decimal_integer NEWLINE
     {
-      $$ = new Assignment(@$, {children: [$global_value_identifier, $decimal_integer]});
+      $$ = new Assignment(@$, {children: [
+        new OutputArgumentList(@global_value_identifier, {children: [$global_value_identifier]}),
+        new InputArgumentList(@decimal_integer, {children: [$decimal_integer]})
+      ]});
     }
   | statement
   | instrument
@@ -962,6 +968,11 @@ class ASTNode {
         identifier = identifier.children[0];
         arrayDimension++;
       } while (identifier instanceof ArrayDeclarator);
+    } else if (declarator instanceof ArrayMember) {
+      identifier = declarator;
+      do {
+        identifier = identifier.children[0];
+      } while (identifier instanceof ArrayMember);
     } else if (declarator instanceof Identifier) {
       identifier = declarator;
     } else {
@@ -1077,7 +1088,7 @@ class ASTNode {
           outputTypesMatchTypeSignature = false;
           const outputType = outputTypes[outputTypeIndex];
           for (const expectedType of expectedTypes) {
-            if (outputType.charAt(0) === expectedType && arraySuffixPredicate(outputType)) {
+            if (outputType && outputType.charAt(0) === expectedType && arraySuffixPredicate(outputType)) {
               outputTypesMatchTypeSignature = true;
               break;
             }
@@ -1382,32 +1393,44 @@ class LabeledStatement extends ASTNode {
 }
 
 class Assignment extends ASTNode {
-  get declarator() { return this.children[0]; }
-  get expression() { return this.children[1]; }
+  get outputArgumentList() { return this.children[0]; }
+  get inputArgumentList() { return this.children[1]; }
+
   get outputTypeSignaturesByInputTypeSignature() {
-    return {
-      'S': ['S'],
+    let outputTypeSignaturesByInputTypeSignature;
+    const outputArgumentCount = this.outputArgumentList.children.length;
+    if (outputArgumentCount > 1) {
+      for (const typeSignature of ['i', 'k']) {
+        const outputTypeSignatures = [typeSignature.repeat(outputArgumentCount)];
+        for (let inputArgumentCount = 1; inputArgumentCount <= outputArgumentCount; inputArgumentCount++) {
+          outputTypeSignaturesByInputTypeSignature[typeSignature.repeat(inputArgumentCount)] = outputTypeSignatures;
+        }
+      }
+    } else {
+      outputTypeSignaturesByInputTypeSignature = {
+        'S': ['S'],
 
-      // TODO: An i-time output for an i-time input (see
-      // https://github.com/csound/csound/search?q=strcpy_opcode_p+path%3AEngine+filename%3Aentry1.c)
-      // is seemingly for assigning a p-field to a string variable, but it
-      // permits statements like STest = 0dbfs.
-      'i': ['i', 'S'],
+        // TODO: An i-time output for an i-time input (see
+        // https://github.com/csound/csound/search?q=strcpy_opcode_p+path%3AEngine+filename%3Aentry1.c)
+        // is seemingly for assigning a p-field to a string variable, but it
+        // permits statements like STest = 0dbfs.
+        'i': ['i', 'S'],
 
-      'k': ['k', 'a'],
-      'a': ['k', 'a'],
+        'k': ['k', 'a'],
+        'a': ['k', 'a'],
 
-      '.': ['.']
-    };
+        '.': ['.']
+      };
+    }
+    return outputTypeSignaturesByInputTypeSignature;
   }
+
   get inputTypeSignatures() { return Object.keys(this.outputTypeSignaturesByInputTypeSignature); }
 
   analyzeSemantics(yy) {
-    this.analyzeSemanticsOfDeclarator(yy, this.declarator);
-
     super.analyzeSemantics(yy);
 
-    this.analyzeSemanticsOfInputArguments(yy, [this.expression], this.inputTypeSignatures);
+    this.analyzeSemanticsOfInputArguments(yy, this.inputArgumentList.children, this.inputTypeSignatures);
   }
 }
 class CompoundAssignment extends ASTNode {}
@@ -1424,15 +1447,15 @@ class OutputArgumentList extends ASTNode {
 class VoidOpcodeStatement extends ASTNode {}
 
 class OpcodeStatement extends VoidOpcodeStatement {
+  get outputArgumentList() { return this.children[0]; }
   get opcodeExpression() { return this.children[1]; }
 
   analyzeSemantics(yy) {
     super.analyzeSemantics(yy);
 
     const outputTypes = [];
-    for (const declarator of this.children[0].children) {
-      if (declarator.type)
-        outputTypes.push(declarator.type);
+    for (const declarator of this.outputArgumentList.children) {
+      outputTypes.push(declarator.type);
     }
     this.opcodeExpression.analyzeSemanticsOfOutputTypes(yy, outputTypes);
   }
