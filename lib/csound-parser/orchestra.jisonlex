@@ -145,36 +145,7 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 "igoto"    return 'GOTO';
 "kgoto"    return 'GOTO';
 
-^{optional_whitespace}\w+":"(?:{whitespace}|\n|$)
-%{
-  const labelName = this.nameFromLabel(yytext);
-  const label = this.globalSymbolTable.labels[labelName];
-  if (label) {
-    this.messages.push({
-      severity: 'warning',
-      location: {
-        position: this.sourceMap.sourceRange([
-          [yylloc.first_line - 1, yylloc.first_column],
-          [yylloc.first_line - 1, yylloc.first_column + labelName.length]
-        ])
-      },
-      excerpt: `Duplicate label ${this.quote(labelName)} ignored`,
-      trace: [{
-        severity: 'info',
-        location: {
-          position: label.range
-        },
-        excerpt: `Label ${this.quote(labelName)} is here`
-      }]
-    });
-  } else {
-    this.globalSymbolTable.addLabel(labelName, this.sourceMap.sourceRange([
-      [yylloc.first_line - 1, yylloc.first_column],
-      [yylloc.first_line - 1, yylloc.first_column + labelName.length]
-    ]));
-  }
-  return 'LABEL';
-%}
+^{optional_whitespace}\w+":"(?:{whitespace}|\n|$) return 'LABEL';
 
 "instr"
 %{
@@ -413,8 +384,6 @@ hexadecimal_integer "0"[Xx][0-9A-Fa-f]+
 %}
 
 %%
-
-lexer.nameFromLabel = label => label.trim().replace(/:$/, '');
 
 lexer.quote = string => `‘${string}’`;
 

@@ -211,11 +211,11 @@ conditional_expression
 labeled_statement
   : LABEL statement
     {
-      $$ = new LabeledStatement(@$, {children: [new Label(@LABEL, {string: $LABEL}), $statement]});
+      $$ = new LabeledStatement(@$, {children: [new Label(@LABEL, {string: $LABEL.slice(0, -2).trim()}), $statement]});
     }
   | LABEL EOF
     {
-      $$ = new LabeledStatement(@$, {children: [new Label(@LABEL, {string: $LABEL})]});
+      $$ = new LabeledStatement(@$, {children: [new Label(@LABEL, {string: $LABEL.slice(0, -2).trim()})]});
     }
   ;
 
@@ -672,6 +672,15 @@ class ASTNode {
       return true;
 
     return type.charAt(0) === this.type.charAt(0) && (!arraySuffixPredicate || arraySuffixPredicate(this.type));
+  }
+
+  analyzeLabels(yy) {
+    if (this.children) {
+      for (const child of this.children) {
+        if (child.analyzeLabels instanceof Function)
+          child.analyzeLabels(yy);
+      }
+    }
   }
 
   analyzeSemantics(yy) {
@@ -1382,12 +1391,31 @@ class ConditionalExpression extends TestAndBodyNode {
   }
 }
 
-class Label extends ASTNode {}
-class LabeledStatement extends ASTNode {
-  constructor(rangeOrLocation, properties) {
-    super(rangeOrLocation, properties);
-    this.children[0] = parser.lexer.nameFromLabel(this.children[0].string);
+class Label extends ASTNode {
+  analyzeLabels(yy) {
+    const label = yy.localSymbolTable.labels[this.string];
+    if (label) {
+      yy.messages.push({
+        severity: 'warning',
+        location: {
+          position: this.range
+        },
+        excerpt: `Duplicate label ${yy.lexer.quote(this.string)} ignored`,
+        trace: [{
+          severity: 'info',
+          location: {
+            position: label.range
+          },
+          excerpt: `Label ${yy.lexer.quote(this.string)} is here`
+        }]
+      });
+    } else {
+      yy.localSymbolTable.addLabel(this.string, this.range);
+    }
   }
+}
+
+class LabeledStatement extends ASTNode {
   get label() { return this.children[0]; }
   get statement() { return this.children[1]; }
 }
@@ -1571,8 +1599,13 @@ class InstrumentNumberAndNameList extends ASTNode {
 }
 
 class Instrument extends ASTNode {
+  analyzeLabels(yy) {
+    // Do nothing
+  }
+
   analyzeSemantics(yy) {
     yy.symbolTables.push(new yy.lexer.SymbolTable());
+    super.analyzeLabels(yy);
     super.analyzeSemantics(yy);
     yy.symbolTables.pop();
   }
@@ -1585,8 +1618,13 @@ class Opcode extends ASTNode {
   get outputTypes() { return this.children[1]; }
   get inputTypes() { return this.children[2]; }
 
+  analyzeLabels(yy) {
+    // Do nothing
+  }
+
   analyzeSemantics(yy) {
     yy.symbolTables.push(new yy.lexer.SymbolTable());
+    super.analyzeLabels(yy);
     super.analyzeSemantics(yy);
     yy.symbolTables.pop();
   }
@@ -1595,6 +1633,7 @@ class Opcode extends ASTNode {
 class Orchestra extends ASTNode {
   analyzeSemantics(yy) {
     yy.symbolTables = [yy.lexer.globalSymbolTable];
+    this.analyzeLabels(yy);
     super.analyzeSemantics(yy);
   }
 }
