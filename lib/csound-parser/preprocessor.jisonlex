@@ -168,7 +168,8 @@ endif "#end"(?:"if")?\b
   this.startRanges.push(this.rangeFromLocation(yylloc));
   this.addText(yytext);
 %}
-<braced_string>(?:[^}]|"}"[^}])+ this.addText(yytext);
+<braced_string>{newline} this.addNewline();
+<braced_string>[^}]|"}"[^}] this.addText(yytext);
 <braced_string>"}}"
 %{
   this.startRanges.pop();
