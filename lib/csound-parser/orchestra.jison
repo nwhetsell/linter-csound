@@ -1155,7 +1155,7 @@ class ASTNode {
     }
 
     if (possibleInputTypeSignatures.length > 1) {
-      yy.addError({
+      yy.messages.push({
         severity: 'warning',
         location: this.errorLocation,
         excerpt: `Types of ${this.inputArgumentDescription} match multiple type signatures of ${this.description}`
@@ -1667,14 +1667,21 @@ Object.assign(parser, {
 parser.pre_parse = function(yy) {
   yy.addError = function(error) {
     this.messages.push(error);
-    if (this.messages.length === 10) {
-      this.parser.parseError('', {}, this.parser.JisonParserError, {
-        severity: 'error',
-        location: {
-          position: error.location
-        },
-        excerpt: 'Too many errors emitted, stopping now'
-      });
+    let errorCount = 0;
+    for (const message of this.messages) {
+      if (message.severity === 'error') {
+        errorCount++;
+        if (errorCount === 10) {
+          this.parser.parseError('', {}, this.parser.JisonParserError, {
+            severity: 'error',
+            location: {
+              position: error.location
+            },
+            excerpt: 'Too many errors emitted, stopping now'
+          });
+          break;
+        }
+      }
     }
   };
 
