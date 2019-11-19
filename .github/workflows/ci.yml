@@ -56,7 +56,7 @@ jobs:
     - name: Run tests
       run: |
         cd lib/csound-parser
-        nyc jasmine
+        jasmine
 
   Windows:
     runs-on: windows-2016
