@@ -62,6 +62,7 @@ jobs:
       uses: coverallsapp/github-action@v1.0.1
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
+        path-to-lcov: ./lib/csound-parser/coverage/lcov.info
 
   Windows:
     runs-on: windows-2016
