@@ -1,7 +1,6 @@
 # Csound Linting in Atom
 
 [![Actions](https://github.com/nwhetsell/linter-csound/workflows/CI/badge.svg)](https://github.com/nwhetsell/linter-csound/actions?workflow=CI)
-[![Coverage status](https://coveralls.io/repos/github/nwhetsell/linter-csound/badge.svg?branch=master)](https://coveralls.io/github/nwhetsell/linter-csound?branch=master)
 [![apm](https://img.shields.io/apm/dm/linter-csound.svg)](https://atom.io/packages/linter-csound)
 
 This [Atom](https://atom.io/) package adds syntax checking for [Csound](https://csound.com/) orchestras.

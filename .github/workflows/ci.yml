@@ -50,19 +50,13 @@ jobs:
     - name: Install linter-csound
       run: npm install
 
-    - name: Install Jasmine and nyc (Istanbul’s CLI)
-      run: npm install --global jasmine nyc
+    - name: Install Jasmine
+      run: npm install --global jasmine
 
     - name: Run tests
       run: |
         cd lib/csound-parser
         nyc jasmine
-
-    - name: Update Coveralls
-      uses: coverallsapp/github-action@v1.0.1
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        path-to-lcov: ./lib/csound-parser/coverage/lcov.info
 
   Windows:
     runs-on: windows-2016
