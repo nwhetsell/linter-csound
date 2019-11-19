@@ -1,0 +1,90 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  macOS:
+    runs-on: macOS-latest
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v1
+
+    - name: Install Boost and Csound
+      run: brew install boost csound
+
+    - name: Install linter-csound
+      run: npm install
+
+    - name: Install Jasmine
+      run: npm install --global jasmine
+
+    - name: Run tests
+      run: |
+        cd lib/csound-parser
+        jasmine
+
+  Linux:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v1
+
+    - name: Set up Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+
+    - name: Build and install Csound
+      run: |
+        sudo apt-get --assume-yes install bison flex libsndfile1-dev
+        wget --no-verbose https://github.com/csound/csound/archive/6.13.0.tar.gz
+        tar -xf 6.13.0.tar.gz
+        mkdir build
+        cd build
+        cmake -DBUILD_DSSI_OPCODES=OFF ../csound-6.13.0
+        make
+        sudo make install
+        sudo ldconfig
+
+    - name: Install Boost
+      run: sudo apt-get --assume-yes install libboost-dev
+
+    - name: Install linter-csound
+      run: npm install
+
+    - name: Install Jasmine and nyc (Istanbul’s CLI)
+      run: npm install --global jasmine nyc
+
+    - name: Run tests
+      run: |
+        cd lib/csound-parser
+        nyc jasmine
+
+    - name: Update Coveralls
+      run: |
+        npm --global install coveralls
+        nyc report --reporter=text-lcov | coveralls
+
+  Windows:
+    runs-on: windows-2016
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v1
+
+    - name: Install Csound
+      run: |
+        curl.exe --location --remote-name --remote-header-name --show-error --silent https://github.com/csound/csound/releases/download/6.13.0/Csound6.13.0_Windows_x64-installer.exe
+        Start-Process Csound6.13.0_Windows_x64-installer.exe '/verySilent /noRestart' -Wait
+        Write-Output "::add-path::$Env:ProgramFiles\Csound6_x64\bin"
+
+    - name: Install linter-csound
+      run: |
+        $Env:CL = "/I`"$Env:BOOST_ROOT\include`" /I`"$Env:ProgramFiles\Csound6_x64\include`""
+        $Env:LINK = "`"$Env:ProgramFiles\Csound6_x64\lib\csound64.lib`""
+        npm install
+
+    - name: Install Jasmine
+      run: npm install --global jasmine
+
+    - name: Run tests
+      run: |
+        cd lib\csound-parser
+        jasmine

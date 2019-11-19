@@ -13,8 +13,16 @@
   "engines": {
     "atom": ">=1.0.0 <2.0.0"
   },
+  "packages-deps": [
+    "linter"
+  ],
   "dependencies": {
     "csound-api": "latest"
+  },
+  "devDependencies": {
+    "dedent-js": "latest",
+    "jasmine-terminal-reporter": "latest",
+    "jison": "https://github.com/GerHobbelt/jison/archive/0.6.1-215.tar.gz"
   },
   "providedServices": {
     "linter": {
@@ -22,12 +30,5 @@
         "2.0.0": "provideLinter"
       }
     }
-  },
-  "devDependencies": {
-    "dedent-js": "^1.0.1",
-    "jison": "https://github.com/GerHobbelt/jison/archive/0.6.1-215.tar.gz"
-  },
-  "packages-deps": [
-    "linter"
-  ]
+  }
 }
