@@ -59,9 +59,9 @@ jobs:
         nyc jasmine
 
     - name: Update Coveralls
-      run: |
-        npm --global install coveralls
-        nyc report --reporter=text-lcov | coveralls
+      uses: coverallsapp/github-action@v1.0.1
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
 
   Windows:
     runs-on: windows-2016
