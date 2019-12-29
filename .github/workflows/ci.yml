@@ -29,9 +29,6 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v2
 
-    - name: Set up Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v1
-
     - name: Build and install Csound
       run: |
         sudo apt-get --assume-yes install bison flex libsndfile1-dev
