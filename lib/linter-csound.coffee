@@ -17,7 +17,7 @@ LinterCsound =
       items:
         type: 'string'
 
-  provideLinter: () ->
+  provideLinter: ->
     return {
       name: 'Csound'
       grammarScopes: ['source.csound', 'source.csound-document']
