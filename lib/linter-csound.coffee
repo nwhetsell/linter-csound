@@ -25,7 +25,7 @@ LinterCsound =
       lintsOnChange: true
 
       lint: (editor) ->
-        return new Promise((resolve, reject) ->
+        return new Promise((resolve) ->
           if editor.getRootScopeDescriptor().getScopesArray()[0] is 'source.csound-document'
             documentProcessor.filePath = editor.getPath()
             documentProcessor.setInput(editor.getText())
