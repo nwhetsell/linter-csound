@@ -3,7 +3,7 @@
 [![Actions](https://github.com/nwhetsell/linter-csound/workflows/CI/badge.svg)](https://github.com/nwhetsell/linter-csound/actions?workflow=CI)
 [![apm](https://img.shields.io/apm/dm/linter-csound.svg)](https://atom.io/packages/linter-csound)
 
-This [Atom](https://atom.io/) package adds syntax checking for [Csound](https://csound.com/) orchestras.
+This [Atom](https://atom.io) package adds syntax checking for [Csound](https://csound.com) orchestras.
 
 ## Including Files
 
