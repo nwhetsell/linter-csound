@@ -231,9 +231,21 @@ array_declarator
     {
       $$ = new ArrayDeclarator(@$, {children: [$identifier]});
     }
-  | array_declarator '[' ']'
+  | array_declarator '['[left_square_bracket] ']'[right_square_bracket]
     {
-      $$ = new ArrayDeclarator(@$, {children: [$array_declarator]});
+      $$ = new ArrayDeclarator(@$, {children: [$array_declarator.children[0]]});
+      yy.addError({
+        severity: 'warning',
+        location: {
+          position: yy.lexer.rangeFromLocation({
+            first_line:   @left_square_bracket.first_line,
+            first_column: @left_square_bracket.first_column,
+            last_line:    @right_square_bracket.last_line,
+            last_column:  @right_square_bracket.last_column
+          })
+        },
+        excerpt: `Multiple ${yy.lexer.quote('[]')} are not needed to delcare multidimensional arrays`
+      });
     }
   ;
 
