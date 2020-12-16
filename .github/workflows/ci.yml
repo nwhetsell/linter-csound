@@ -52,7 +52,7 @@ jobs:
       run: npm install
 
     - name: Install Jasmine
-      run: npm install --global jasmine
+      run: sudo npm install --global jasmine
 
     - name: Run tests
       run: |
