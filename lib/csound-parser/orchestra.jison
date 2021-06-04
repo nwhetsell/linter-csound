@@ -244,7 +244,7 @@ array_declarator
             last_column:  @right_square_bracket.last_column
           })
         },
-        excerpt: `Multiple ${yy.lexer.quote('[]')} are not needed to delcare multidimensional arrays`
+        excerpt: `Multiple ${yy.lexer.quote('[]')} are not needed to declare multidimensional arrays`
       });
     }
   ;
