@@ -9,7 +9,7 @@ This [Atom](https://atom.io) package adds syntax checking for [Csound](https://c
 
 The linter-csound preprocessor searches paths for files included using [`#include`](https://csound.com/docs/manual/include.html) in this order:
 
-1. The paths returned by [`Project::getPaths`](https://atom.io/docs/api/latest/Project#instance-getPaths). (This array usually contains one path that’s roughly equivalent to the current directory.)
+1. The paths returned by Atom’s [`Project::getPaths`](https://flight-manual.atom.io/api). (This is usually one path that’s roughly equivalent to the current directory.)
 
 2. The path of the file being preprocessed.
 
@@ -30,7 +30,7 @@ The linter-csound preprocessor searches paths for files included using [`#includ
 
 ## linter-csound’s Orchestra Parser
 
-To check the syntax of orchestras, linter-csound uses a [preprocessor and parser](lib/csound-parser) generated using the [GerHobbelt fork](https://github.com/GerHobbelt/jison) of [Jison](https://zaa.ch/jison/). The [grammar](lib/csound-parser/orchestra.jison) used by the parser is based on [this JavaScript grammar](http://www.cjihrig.com/development/jsparser/ecmascript.jison) (which you can read about [here](http://cjihrig.com/blog/creating-a-javascript-parser/)) and [this C grammar](http://www.quut.com/c/ANSI-C-grammar-y-2011.html). To generate the preprocessor and parser on macOS, open a Terminal, `cd` to linter-csound/lib/csound-parser, and then run:
+To check the syntax of orchestras, linter-csound uses a [preprocessor and parser](lib/csound-parser) generated using the [GerHobbelt fork](https://github.com/GerHobbelt/jison) of [Jison](https://zaa.ch/jison/). The [grammar](lib/csound-parser/orchestra.jison) used by the parser is based on [this JavaScript grammar](https://github.com/cjihrig/jsparser/blob/master/ecmascript.jison) and [this C grammar](http://www.quut.com/c/ANSI-C-grammar-y-2011.html). To generate the preprocessor and parser on macOS, open a Terminal, `cd` to linter-csound/lib/csound-parser, and then run:
 
 ```sh
 npm install https://github.com/GerHobbelt/jison/archive/0.6.1-215.tar.gz
