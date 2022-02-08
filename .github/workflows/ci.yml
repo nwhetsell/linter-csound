@@ -3,81 +3,44 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  macOS:
-    runs-on: macos-latest
+  Test:
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
     - name: Check out repository
       uses: actions/checkout@v2
 
-    - name: Install Boost and Csound
+    - name: Install Boost and Csound on macOS
       run: brew install boost csound
-
-    - name: Install linter-csound
-      run: npm install
-
-    - name: Install Jasmine
-      run: npm install --global jasmine
-
-    - name: Run tests
+      if: ${{ matrix.os == 'macos-latest' }}
+    - name: Install Boost and Csound on Linux
       run: |
-        cd lib/csound-parser
-        jasmine
-
-  Linux:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Check out repository
-      uses: actions/checkout@v2
-
-    - name: Set up Node.js
-      uses: actions/setup-node@v2
-
-    - name: Build and install Csound
-      run: |
-        sudo apt-get --assume-yes install bison flex libsndfile1-dev
-        wget --no-verbose https://github.com/csound/csound/archive/refs/tags/6.16.0.tar.gz
-        tar -xf 6.16.0.tar.gz
-        cd csound-6.16.0
-        mkdir build
-        cd build
-        cmake .. -DBUILD_DSSI_OPCODES=OFF
-        make
-        sudo make install
+        sudo apt-get --assume-yes install libboost-dev libsndfile1-dev
+        wget --no-verbose https://github.com/csound/csound/archive/refs/tags/6.17.0.tar.gz
+        tar -xf 6.17.0.tar.gz
+        cd csound-6.17.0
+        cmake -S . -B build -DBUILD_DSSI_OPCODES=OFF
+        cmake --build build
+        sudo cmake --install build
         sudo ldconfig
+    - name: Install Boost and Csound on Windows
+      run: |
+        choco install boost-msvc-14.2 --no-progress
+        curl.exe --location --remote-name --remote-header-name --show-error --silent https://github.com/csound/csound/releases/download/6.17.0/csound-6.17.0-windows-x64-installer.zip
+        7z x csound-6.17.0-windows-x64-installer.zip
+        Start-Process csound-windows_x86_64-6.17.0-916.exe '/verySilent /noRestart' -Wait
+        Add-Content $Env:GITHUB_PATH "$Env:ProgramFiles\csound\bin" -Encoding utf8
+      if: ${{ matrix.os == 'windows-latest' }}
 
-    - name: Install Boost
-      run: sudo apt-get --assume-yes install libboost-dev
-
-    - name: Install linter-csound
+    - name: Install linter-csound on macOS and Linux
       run: npm install
-
-    - name: Install Jasmine
-      run: sudo npm install --global jasmine
-
-    - name: Run tests
+      if: ${{ matrix.os != 'windows-latest' }}
+    - name: Install linter-csound on Windows
       run: |
-        cd lib/csound-parser
-        jasmine
-
-  Windows:
-    runs-on: windows-latest
-    steps:
-    - name: Check out repository
-      uses: actions/checkout@v2
-
-    - name: Install Csound
-      run: |
-        curl.exe --location --remote-name --remote-header-name --show-error --silent https://github.com/csound/csound/releases/download/6.16.0/Csound6-windows_x86_64-6.16.0.exe
-        Start-Process Csound6-windows_x86_64-6.16.0.exe '/verySilent /noRestart' -Wait
-        Add-Content $Env:GITHUB_PATH "$Env:ProgramFiles\Csound6_x64\bin" -Encoding utf8
-
-    - name: Install Boost
-      run: choco install boost-msvc-14.2 --no-progress
-
-    - name: Install linter-csound
-      run: |
-        $Env:CL = "/I`"C:\local\boost_1_74_0`" /I`"$Env:ProgramFiles\Csound6_x64\include`""
-        $Env:LINK = "`"$Env:ProgramFiles\Csound6_x64\lib\csound64.lib`""
+        $Env:CL = "/I`"C:\local\boost_1_74_0`" /I`"$Env:ProgramFiles\csound\include`""
+        $Env:LINK = "`"$Env:ProgramFiles\csound\lib\csound64.lib`""
         npm install
 
     - name: Install Jasmine
@@ -85,5 +48,5 @@ jobs:
 
     - name: Run tests
       run: |
-        cd lib\csound-parser
+        cd lib/csound-parser
         jasmine
