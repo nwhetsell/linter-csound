@@ -25,6 +25,7 @@ jobs:
         cmake --build build
         sudo cmake --install build
         sudo ldconfig
+      if: ${{ matrix.os == 'ubuntu-latest' }}
     - name: Install Boost and Csound on Windows
       run: |
         choco install boost-msvc-14.2 --no-progress
