@@ -43,6 +43,7 @@ jobs:
         $Env:CL = "/I`"C:\local\boost_1_74_0`" /I`"$Env:ProgramFiles\csound\include`""
         $Env:LINK = "`"$Env:ProgramFiles\csound\lib\csound64.lib`""
         npm install
+      if: ${{ matrix.os == 'windows-latest' }}
 
     - name: Install Jasmine
       run: npm install --global jasmine
