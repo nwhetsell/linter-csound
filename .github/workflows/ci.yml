@@ -36,8 +36,14 @@ jobs:
       if: ${{ matrix.os == 'windows-2019' }}
 
     - name: Install linter-csound on macOS and Linux
+      run: |
+        export CPATH="$(brew --prefix)/include"
+        export LIBRARY_PATH="$(brew --prefix)/lib"
+        npm install
+      if: ${{ matrix.os != 'macos-latest' }}
+    - name: Install linter-csound on macOS and Linux
       run: npm install
-      if: ${{ matrix.os != 'windows-2019' }}
+      if: ${{ matrix.os != 'ubuntu-latest' }}
     - name: Install linter-csound on Windows
       run: |
         $Env:CL = "/I`"C:\local\boost_1_74_0`" /I`"$Env:ProgramFiles\csound\include`""
