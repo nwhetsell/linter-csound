@@ -1,15 +1,14 @@
-# Csound Linting in Atom
+# Csound Linting in Pulsar and Atom Forks
 
 [![Actions](https://github.com/nwhetsell/linter-csound/workflows/CI/badge.svg)](https://github.com/nwhetsell/linter-csound/actions?workflow=CI)
-[![apm](https://img.shields.io/apm/dm/linter-csound.svg)](https://atom.io/packages/linter-csound)
 
-This [Atom](https://atom.io) package adds syntax checking for [Csound](https://csound.com) orchestras.
+This [Pulsar](https://pulsar-edit.dev) package adds syntax checking for [Csound](https://csound.com) orchestras.
 
 ## Including Files
 
 The linter-csound preprocessor searches paths for files included using [`#include`](https://csound.com/docs/manual/include.html) in this order:
 
-1. The paths returned by Atom’s [`Project::getPaths`](https://flight-manual.atom.io/api). (This is usually one path that’s roughly equivalent to the current directory.)
+1. The paths returned by Pulsar’s `Project::getPaths`. (This is usually one path that’s roughly equivalent to the current directory.)
 
 2. The path of the file being preprocessed.
 
