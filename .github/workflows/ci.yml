@@ -46,7 +46,7 @@ jobs:
       if: ${{ matrix.os == 'windows-2019' }}
 
     - name: Install Jasmine
-      run: npm install --global jasmine
+      run: npm install --global jasmine@3
 
     - name: Run tests
       run: |
