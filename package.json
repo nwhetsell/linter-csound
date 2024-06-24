@@ -2,7 +2,7 @@
   "name": "linter-csound",
   "main": "./lib/linter-csound",
   "version": "0.5.15",
-  "description": "Lint Csound orchestras in Pulsar and Atom Forks",
+  "description": "Lint Csound orchestras in Pulsar and Atom forks",
   "keywords": [
     "csound",
     "music",
